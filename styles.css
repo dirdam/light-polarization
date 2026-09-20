@@ -1,0 +1,584 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --accent: #3d2a5c;
+    --accent-2: #2ba7a3;
+    --accent-mid: #4f5a73;
+    --panel-bg: rgba(255, 255, 255, 0.66);
+    --panel-border: rgba(0, 0, 0, 0.12);
+    --text-main: #262626;
+    --text-dim: #5a5a5a;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--text-main);
+    padding: 40px 20px;
+    overflow-x: hidden;
+    /* A cool violet/teal wash plus a faint bottom-right "aperture" motif —
+       concentric rotated wedges evoke a polarizing filter ring, built purely
+       from CSS conic gradients rather than embedded simulation-trace data
+       (this phenomenon has no trajectory to trace, it's an algebraic law). */
+    background-image:
+        repeating-conic-gradient(from 0deg, rgba(61, 42, 92, 0.05) 0deg 10deg, rgba(43, 167, 163, 0.05) 10deg 20deg),
+        linear-gradient(160deg, #f3f0f7 0%, #eef1f0 45%, #e2e6ec 100%);
+    background-repeat: no-repeat, no-repeat;
+    background-position: bottom -180px right -180px, center;
+    background-size: 620px 620px, cover;
+    background-attachment: fixed, fixed;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.how-to-interpret {
+    padding: 22px 24px;
+    margin-bottom: 24px;
+}
+
+.how-to-interpret h2 {
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.how-to-interpret p {
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+.how-to-interpret p + p {
+    margin-top: 10px;
+}
+
+.how-to-interpret p strong {
+    color: var(--text-main);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 36px;
+    position: relative;
+}
+
+header h1 {
+    font-size: 2.4em;
+    font-weight: 800;
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: 0.5px;
+}
+
+header p {
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-size: 1.05em;
+}
+
+.intro-wrap {
+    position: relative;
+    max-width: 760px;
+    margin: 28px auto 0;
+    padding-top: 22px;
+}
+
+.intro-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+header p.intro {
+    font-size: 1.08em;
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin: 0;
+}
+
+header p.intro strong {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    align-items: start;
+}
+
+.canvas-panel {
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.viz-root {
+    color-scheme: light;
+    --surface-1: #fffdf9;
+    --ink-primary: #1a1a1a;
+    --ink-secondary: #52514e;
+    --ink-muted: #8c8a84;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+        color-scheme: dark;
+        --surface-1: #1c1c1a;
+        --ink-primary: #ffffff;
+        --ink-secondary: #c3c2b7;
+        --ink-muted: #8c8a84;
+    }
+}
+
+:root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1c1c1a;
+    --ink-primary: #ffffff;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #8c8a84;
+}
+
+.legend-row {
+    display: flex;
+    justify-content: center;
+    gap: 22px;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--ink-secondary);
+}
+
+.legend-row strong {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.chart-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface-1);
+    box-shadow: inset 0 0 0 1px var(--panel-border);
+}
+
+.photo-base {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.photo-layers {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* Each polarizing filter is drawn as a translucent glass pane sitting
+   slightly offset from the last (a small per-layer translate), so the
+   stack reads as physical sheets fanned in viewing order, closest-to-
+   viewer on top — matching the light path: layer 1 first, layer N last. */
+.polarizer-pane {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
+    transform: translate(var(--pane-dx, 0px), var(--pane-dy, 0px));
+}
+
+.polarizer-pane .axis-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 130%;
+    height: 2px;
+    background: var(--pane-color, var(--accent));
+    opacity: 0.85;
+    transform: translate(-50%, -50%) rotate(var(--pane-angle, 0deg));
+}
+
+.polarizer-pane .axis-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 0.68em;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--pane-color, var(--accent));
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.photo-scrim {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: var(--scrim-opacity, 0);
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.stage-ladder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.78em;
+}
+
+.stage-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ink-secondary);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.stage-chip .stage-chip-value {
+    color: var(--ink-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.stage-chip .stage-chip-delta {
+    font-weight: 600;
+    color: var(--ink-muted);
+    font-size: 0.85em;
+}
+
+.stage-chip.final {
+    background: var(--accent);
+    color: #fff;
+}
+
+.stage-chip.final .stage-chip-value,
+.stage-chip.final .stage-chip-delta {
+    color: #fff;
+}
+
+.stage-arrow {
+    color: var(--ink-muted);
+    opacity: 0.7;
+}
+
+.controls-panel {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.field-group label {
+    display: block;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.field-label-row label {
+    margin-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.field-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--accent-mid);
+}
+
+.field-hint {
+    font-size: 0.75em;
+    color: var(--text-dim);
+    margin-top: 6px;
+}
+
+.field-number {
+    width: 84px;
+    padding: 6px 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: white;
+    color: var(--accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    font-size: 0.95em;
+}
+
+.field-number:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #d9d9d9;
+    outline: none;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+}
+
+input[type="range"]:focus {
+    outline: 2px solid var(--text-dim);
+    outline-offset: 2px;
+}
+
+/* --- Per-layer angle cards ------------------------------------------- */
+.layer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.layer-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.035);
+    border: 1px solid var(--panel-border);
+}
+
+.layer-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.layer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.85em;
+    color: var(--text-main);
+}
+
+.layer-badge .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.layer-dial {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.layer-dial::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 78%;
+    height: 2px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(var(--dial-angle, 0deg));
+}
+
+.layer-card-header .field-number {
+    width: 62px;
+    padding: 6px 6px;
+    font-size: 0.88em;
+}
+
+.layer-delta {
+    font-size: 0.72em;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.preset-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.preset-buttons button {
+    flex: 1;
+    min-width: 0;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.78em;
+    font-weight: 700;
+    padding: 8px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.preset-buttons button:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-main);
+}
+
+.preset-buttons button.active {
+    background: var(--accent-mid);
+    color: white;
+}
+
+.pill-toggle {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.pill-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.8em;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pill-toggle button:hover {
+    color: var(--text-main);
+}
+
+.pill-toggle button[aria-pressed="true"] {
+    background: white;
+    color: var(--accent-mid);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+footer {
+    text-align: center;
+    margin-top: 36px;
+    padding-top: 22px;
+    border-top: 1px solid var(--panel-border);
+    color: var(--text-dim);
+    font-size: 0.85em;
+}
+
+footer .pill-toggle {
+    margin-bottom: 12px;
+}
+
+footer a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+footer a.source-link svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    vertical-align: -2px;
+    margin-right: 3px;
+}
+
+@media screen and (max-width: 860px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    header h1 {
+        font-size: 1.8em;
+    }
+}

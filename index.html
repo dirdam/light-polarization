@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="browserTabTitle">Light Polarization</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕶️</text></svg>">
+    <meta name="theme-color" content="#3d2a5c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Light Polarization">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 data-i18n="pageTitle">Light Polarization</h1>
+            <p class="subtitle" data-i18n="subtitle">How stacking angled filters can block light &mdash; or bring it back</p>
+            <div class="intro-wrap">
+                <p class="intro" id="introText" data-i18n-html="introHtml">
+                    A polarizing filter only lets through light oscillating along its own
+                    <strong>transmission axis</strong>. Stack several filters at different angles and something
+                    surprising happens: two filters crossed at 90&deg; block almost all the light, yet inserting a
+                    third filter in between &mdash; at just the right angle &mdash; lets a good chunk of the light
+                    back through. Set the number of layers and the angle of each one below and watch the effect
+                    play out on the image, following <strong>Malus's law</strong> exactly.
+                </p>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <div class="canvas-panel panel viz-root">
+                <div class="legend-row">
+                    <span class="legend-swatch"><span data-i18n="transmissionLabel">Transmitted light</span>: <strong id="transmissionReadout">100%</strong></span>
+                </div>
+
+                <div class="chart-stage" id="stage">
+                    <img id="photoBase" class="photo-base" src="assets/images/lasso.png" alt="">
+                    <div id="photoLayers" class="photo-layers"></div>
+                    <div id="photoScrim" class="photo-scrim"></div>
+                </div>
+
+                <div class="stage-ladder" id="stageLadder"></div>
+            </div>
+
+            <div class="controls-panel panel">
+                <div class="field-group">
+                    <div class="field-label-row">
+                        <label for="layerCountSlider">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                            <span data-i18n="layersGroupLabel">Layers</span>
+                        </label>
+                        <input type="number" id="layerCountNumber" class="field-number" min="1" max="8" step="1" value="3">
+                    </div>
+                    <input type="range" id="layerCountSlider" min="1" max="8" step="1" value="3">
+                    <div class="field-hint" data-i18n="layersHint">How many polarizing filters are stacked, in order</div>
+                </div>
+
+                <div id="layerControls" class="layer-controls"></div>
+
+                <div class="field-group">
+                    <label data-i18n="presetsLabel">Presets</label>
+                    <div class="preset-buttons" id="presetButtons"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel how-to-interpret">
+            <h2 data-i18n="howToInterpretTitle">How to interpret</h2>
+            <p data-i18n-html="howToInterpretHtml1">
+                Unpolarized light loses exactly half its intensity through the very first filter, whatever angle
+                you set it to &mdash; that angle doesn't matter yet, since there's no reference direction to measure
+                it against. From the second filter onward, each additional filter transmits a fraction
+                <strong>cos&sup2;(&Delta;&theta;)</strong> of the light that reached it, where &Delta;&theta; is the
+                angle between that filter and the one right before it (Malus's law). Rotate the individual layers
+                and watch that transmission ladder change stage by stage.
+            </p>
+            <p data-i18n-html="howToInterpretHtml2">
+                This is why two crossed filters (&Delta;&theta;=90&deg;) block essentially everything, but slipping a
+                third filter at 45&deg; between them restores about 12.5% of the light &mdash; each of the two
+                45&deg; steps only costs a <strong>cos&sup2;(45&deg;)=50%</strong> loss, instead of one brutal
+                cos&sup2;(90&deg;)=0% jump. Try the <strong>Three-filter reveal</strong> preset, then compare it
+                with <strong>Gentle rotation</strong>, which spreads the same 0&deg;&rarr;90&deg; turn over five
+                small steps and lets even more light through.
+            </p>
+        </div>
+
+        <footer>
+            <div class="pill-toggle" id="langToggle" role="group" aria-label="Language"></div>
+            <p>
+                &copy; <span id="footerYear"></span>
+                <a href="https://dirdam.github.io" target="_blank" rel="noopener noreferrer">Adri&aacute;n Jim&eacute;nez Pascual</a>
+                &middot;
+                <a href="https://dirdam.squadro.app/my-apps.html" target="_blank" rel="noopener noreferrer" data-i18n="seeMoreTools">See more tools</a>
+                &middot;
+                <a href="https://github.com/dirdam/light-polarization" target="_blank" rel="noopener noreferrer" class="source-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span data-i18n="viewSource">View source</span></a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="app.js" defer></script>
+</body>
+</html>
