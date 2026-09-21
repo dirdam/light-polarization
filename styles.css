@@ -253,14 +253,13 @@ header p.intro strong {
 
 .polarizer-pane .axis-badge {
     position: absolute;
-    /* Anchored close to the pane's own center (not a corner) and
-       pivoting there: a corner sits right at the pane's boundary, so
-       counter-rotating it to stay upright swings the label outside the
-       card at some angles (it no longer rotates rigidly with the pane).
-       Near the center there's comfortable clearance in every direction,
-       so the label stays inside no matter how the pane is rotated. */
-    top: 38%;
-    left: 50%;
+    /* Anchored along the corner-to-center diagonal, close to the
+       corner but inset enough that the counter-rotated (screen-upright)
+       label has clearance to the pane's edge in every direction — right
+       at the corner itself there's zero margin, so it would swing
+       outside once counter-rotated for legibility. */
+    top: 30%;
+    left: 30%;
     font-size: 0.68em;
     font-weight: 700;
     padding: 2px 7px;
