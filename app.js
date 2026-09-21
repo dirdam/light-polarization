@@ -152,19 +152,21 @@ function evenSpreadAngles(n) {
 }
 
 function computeStages(activeAngles) {
-    const stages = [{ value: 1, delta: null }];
+    const stages = [{ value: 1, delta: null, local: null }];
     let I = 1;
     activeAngles.forEach((theta, idx) => {
         let delta = null;
+        let local;
         if (idx === 0) {
-            I = I / 2;
+            local = 0.5;
         } else {
             delta = theta - activeAngles[idx - 1];
             const rad = (delta * Math.PI) / 180;
             const c = Math.cos(rad);
-            I = I * c * c;
+            local = c * c;
         }
-        stages.push({ value: I, delta });
+        I = I * local;
+        stages.push({ value: I, delta, local });
     });
     return stages;
 }
@@ -466,7 +468,6 @@ onLangChange(renderLayerControls);
 
 // --- Photo effect + transmission ladder ---------------------------------
 const photoLayersEl = document.getElementById('photoLayers');
-const photoScrimEl = document.getElementById('photoScrim');
 const stageLadderEl = document.getElementById('stageLadder');
 const transmissionReadoutEl = document.getElementById('transmissionReadout');
 
@@ -475,14 +476,24 @@ function fmtPct(v) {
     return (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%';
 }
 
-function renderPhoto(activeAngles) {
+// Each pane darkens the light source by exactly the fraction *it* blocks
+// (stage.local), not the cumulative total — so the darkening only shows
+// up where a filter's own square footprint actually is. Stacking N
+// translucent panes multiplies their (1-alpha) factors together via
+// ordinary alpha compositing, which reproduces the correct cumulative
+// transmission wherever all N happen to overlap, and the correct partial
+// result wherever fewer of them do — the sunburst outside every pane's
+// footprint (the stage's corners) stays untouched at full brightness.
+function renderPhoto(activeAngles, stages) {
     photoLayersEl.innerHTML = '';
     activeAngles.forEach((angle, idx) => {
         const color = layerColorFor(idx);
+        const local = stages[idx + 1].local;
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
+        pane.style.setProperty('--pane-alpha', String(1 - local));
         pane.style.setProperty('--pane-dx', `${idx * 5}px`);
         pane.style.setProperty('--pane-dy', `${idx * -5}px`);
 
@@ -528,9 +539,8 @@ function recomputeAndRender() {
     const activeAngles = angles.slice(0, layerCount);
     const stages = computeStages(activeAngles);
     const total = stages[stages.length - 1].value;
-    renderPhoto(activeAngles);
+    renderPhoto(activeAngles, stages);
     renderLadder(stages);
-    photoScrimEl.style.setProperty('--scrim-opacity', String(1 - total));
     transmissionReadoutEl.textContent = fmtPct(total);
 }
 
