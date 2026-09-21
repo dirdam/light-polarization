@@ -525,15 +525,26 @@ function polygonClipPath(corners) {
 // stack order — a hidden layer contributes no entry at all, so it's
 // skipped both visually and in the Malus's-law chain (computeStages
 // only ever sees the angles that are actually still in the stack).
+// The border's brightness stands in for depth in the light path — dim
+// for the layer closest to the light source (first hit), bright for
+// the one closest to the viewer (last hit, i.e. highest i among the
+// currently *visible* layers) — a hidden layer truly drops out of the
+// path, so this is based on visible position, not the layer's own slot.
+const BORDER_ALPHA_FAR = 0.15;
+const BORDER_ALPHA_NEAR = 0.85;
+
 function renderPhoto(activeIdx) {
     photoLayersEl.innerHTML = '';
     activeIdx.forEach((originalIdx, i) => {
         const angle = angles[originalIdx];
         const color = layerColorFor(originalIdx);
+        const depthFrac = activeIdx.length > 1 ? i / (activeIdx.length - 1) : 1;
+        const borderAlpha = BORDER_ALPHA_FAR + (BORDER_ALPHA_NEAR - BORDER_ALPHA_FAR) * depthFrac;
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
+        pane.style.setProperty('--pane-border-alpha', String(borderAlpha));
         // Offset by the layer's own slot (originalIdx), not its position
         // among only the visible ones (i) — so hiding layer 2 doesn't
         // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
