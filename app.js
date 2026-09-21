@@ -174,6 +174,15 @@ function computeStages(activeAngles) {
 let angles = evenSpreadAngles(MAX_LAYERS);
 let layerCount = 3;
 
+// Which palette color belongs to each position. Kept separate from
+// `angles` so that dragging a card to reorder it carries its color (its
+// visual identity) along with its angle, instead of the color staying
+// pinned to the slot the card lands in.
+let colorIdx = Array.from({ length: MAX_LAYERS }, (_, i) => i);
+function layerColorFor(idx) {
+    return LAYER_COLORS[colorIdx[idx] % LAYER_COLORS.length];
+}
+
 const PRESETS = {
     aligned: { count: 2, angles: [0, 0] },
     crossed: { count: 2, angles: [0, 90] },
@@ -215,8 +224,28 @@ onLangChange(renderPresetButtons);
 function applyPreset(key) {
     const p = PRESETS[key];
     layerCount = p.count;
-    p.angles.forEach((a, i) => { angles[i] = a; });
+    p.angles.forEach((a, i) => { angles[i] = a; colorIdx[i] = i; });
     syncLayerCountUI();
+    renderLayerControls();
+    syncPresetHighlight();
+    recomputeAndRender();
+}
+
+// Reordering moves a card to sit exactly where it was dropped, shifting
+// the layers in between — the same "insert" semantics as reordering any
+// drag-and-drop list, not a plain two-item swap.
+function moveLayer(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= layerCount || to >= layerCount) return;
+    const anglesActive = angles.slice(0, layerCount);
+    const colorsActive = colorIdx.slice(0, layerCount);
+    const [aVal] = anglesActive.splice(from, 1);
+    const [cVal] = colorsActive.splice(from, 1);
+    anglesActive.splice(to, 0, aVal);
+    colorsActive.splice(to, 0, cVal);
+    for (let i = 0; i < layerCount; i++) {
+        angles[i] = anglesActive[i];
+        colorIdx[i] = colorsActive[i];
+    }
     renderLayerControls();
     syncPresetHighlight();
     recomputeAndRender();
@@ -256,13 +285,19 @@ function layerLabelText(idx) {
 }
 
 function buildLayerCard(idx) {
-    const color = LAYER_COLORS[idx % LAYER_COLORS.length];
+    const color = layerColorFor(idx);
 
     const card = document.createElement('div');
     card.className = 'layer-card';
+    card.draggable = true;
 
     const header = document.createElement('div');
     header.className = 'layer-card-header';
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
 
     const badge = document.createElement('div');
     badge.className = 'layer-badge';
@@ -283,6 +318,23 @@ function buildLayerCard(idx) {
     badge.appendChild(dot);
     badge.appendChild(label);
 
+    const moveButtons = document.createElement('div');
+    moveButtons.className = 'layer-move-buttons';
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.textContent = '▲';
+    upBtn.setAttribute('aria-label', 'Move layer up');
+    upBtn.disabled = idx === 0;
+    upBtn.addEventListener('click', () => moveLayer(idx, idx - 1));
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.textContent = '▼';
+    downBtn.setAttribute('aria-label', 'Move layer down');
+    downBtn.disabled = idx === layerCount - 1;
+    downBtn.addEventListener('click', () => moveLayer(idx, idx + 1));
+    moveButtons.appendChild(upBtn);
+    moveButtons.appendChild(downBtn);
+
     const number = document.createElement('input');
     number.type = 'number';
     number.className = 'field-number';
@@ -291,8 +343,33 @@ function buildLayerCard(idx) {
     number.step = '1';
     number.value = String(angles[idx]);
 
+    header.appendChild(handle);
     header.appendChild(badge);
+    header.appendChild(moveButtons);
     header.appendChild(number);
+
+    // Native drag-and-drop reordering: only a press starting on the grip
+    // handle actually begins a drag, so the slider and number input below
+    // stay fully usable (their own mousedown/pointer handling is untouched
+    // since dragstart is cancelled whenever it didn't originate on the handle).
+    card.addEventListener('dragstart', (e) => {
+        if (!e.target.closest('.drag-handle')) { e.preventDefault(); return; }
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(idx));
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        if (!Number.isNaN(from)) moveLayer(from, idx);
+    });
 
     const slider = document.createElement('input');
     slider.type = 'range';
@@ -372,7 +449,7 @@ function fmtPct(v) {
 function renderPhoto(activeAngles) {
     photoLayersEl.innerHTML = '';
     activeAngles.forEach((angle, idx) => {
-        const color = LAYER_COLORS[idx % LAYER_COLORS.length];
+        const color = layerColorFor(idx);
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
