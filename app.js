@@ -185,6 +185,12 @@ function layerColorFor(idx) {
     return LAYER_COLORS[colorIdx[idx] % LAYER_COLORS.length];
 }
 
+// A hidden layer is skipped entirely — not just visually, but from the
+// Malus's-law chain too: the next visible layer measures its angle
+// against the nearest other *visible* layer, exactly as if the hidden
+// one had been physically lifted out of the stack.
+let layerVisible = Array.from({ length: MAX_LAYERS }, () => true);
+
 const PRESETS = {
     aligned: { count: 2, angles: [0, 0] },
     crossed: { count: 2, angles: [0, 90] },
@@ -200,6 +206,7 @@ const PRESET_KEYS = {
 
 function matchesPreset(p) {
     if (layerCount !== p.count) return false;
+    if (!layerVisible.slice(0, p.count).every(Boolean)) return false;
     return p.angles.every((a, i) => Math.abs(angles[i] - a) < 0.5);
 }
 
@@ -226,7 +233,7 @@ onLangChange(renderPresetButtons);
 function applyPreset(key) {
     const p = PRESETS[key];
     layerCount = p.count;
-    p.angles.forEach((a, i) => { angles[i] = a; colorIdx[i] = i; });
+    p.angles.forEach((a, i) => { angles[i] = a; colorIdx[i] = i; layerVisible[i] = true; });
     syncLayerCountUI();
     renderLayerControls();
     syncPresetHighlight();
@@ -240,13 +247,17 @@ function moveLayer(from, to) {
     if (from === to || from < 0 || to < 0 || from >= layerCount || to >= layerCount) return;
     const anglesActive = angles.slice(0, layerCount);
     const colorsActive = colorIdx.slice(0, layerCount);
+    const visActive = layerVisible.slice(0, layerCount);
     const [aVal] = anglesActive.splice(from, 1);
     const [cVal] = colorsActive.splice(from, 1);
+    const [vVal] = visActive.splice(from, 1);
     anglesActive.splice(to, 0, aVal);
     colorsActive.splice(to, 0, cVal);
+    visActive.splice(to, 0, vVal);
     for (let i = 0; i < layerCount; i++) {
         angles[i] = anglesActive[i];
         colorIdx[i] = colorsActive[i];
+        layerVisible[i] = visActive[i];
     }
     renderLayerControls();
     syncPresetHighlight();
@@ -346,8 +357,15 @@ function buildLayerCard(idx) {
     badge.className = 'layer-badge';
     badge.style.color = color;
 
-    const dial = document.createElement('span');
-    dial.className = 'layer-dial';
+    const visToggle = document.createElement('button');
+    visToggle.type = 'button';
+    visToggle.className = 'visibility-toggle';
+    visToggle.style.color = color;
+    visToggle.addEventListener('click', () => {
+        layerVisible[idx] = !layerVisible[idx];
+        updateVisibilityUI(idx);
+        recomputeAndRender();
+    });
 
     const dot = document.createElement('span');
     dot.className = 'dot';
@@ -357,7 +375,7 @@ function buildLayerCard(idx) {
     label.style.color = 'var(--text-main)';
     label.textContent = layerLabelText(idx);
 
-    badge.appendChild(dial);
+    badge.appendChild(visToggle);
     badge.appendChild(dot);
     badge.appendChild(label);
 
@@ -421,7 +439,6 @@ function buildLayerCard(idx) {
         angles[idx] = value;
         slider.value = String(value);
         if (document.activeElement !== number) number.value = String(value);
-        updateDial(dial, value);
         updateDeltaText(idx);
         if (idx + 1 < layerCount) updateDeltaText(idx + 1);
         syncPresetHighlight();
@@ -434,13 +451,23 @@ function buildLayerCard(idx) {
         if (!Number.isNaN(v)) apply(Math.min(180, Math.max(0, v)));
     });
 
-    updateDial(dial, angles[idx]);
-
-    return { card, slider, number, dial, deltaEl };
+    return { card, slider, number, visToggle, deltaEl };
 }
 
-function updateDial(dialEl, angleDeg) {
-    dialEl.style.setProperty('--dial-angle', `${angleDeg}deg`);
+function eyeIconMarkup(visible) {
+    return visible
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.492"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
+}
+
+function updateVisibilityUI(idx) {
+    const els = layerEls[idx];
+    if (!els) return;
+    const visible = layerVisible[idx];
+    els.visToggle.innerHTML = eyeIconMarkup(visible);
+    els.visToggle.setAttribute('aria-pressed', String(!visible));
+    els.visToggle.setAttribute('aria-label', visible ? 'Hide this layer' : 'Show this layer');
+    els.card.classList.toggle('hidden-layer', !visible);
 }
 
 function updateDeltaText(idx) {
@@ -462,7 +489,10 @@ function renderLayerControls() {
         layerEls.push(built);
         layerControlsContainer.appendChild(built.card);
     }
-    for (let i = 0; i < layerCount; i++) updateDeltaText(i);
+    for (let i = 0; i < layerCount; i++) {
+        updateDeltaText(i);
+        updateVisibilityUI(i);
+    }
 }
 onLangChange(renderLayerControls);
 
@@ -484,25 +514,30 @@ function fmtPct(v) {
 // transmission wherever all N happen to overlap, and the correct partial
 // result wherever fewer of them do — the sunburst outside every pane's
 // footprint (the stage's corners) stays untouched at full brightness.
-function renderPhoto(activeAngles, stages) {
+// `activeIdx` holds the *original* card index of each visible layer, in
+// stack order — a hidden layer contributes no entry at all, so it's
+// skipped both visually and in the Malus's-law chain (computeStages
+// only ever sees the angles that are actually still in the stack).
+function renderPhoto(activeIdx, stages) {
     photoLayersEl.innerHTML = '';
-    activeAngles.forEach((angle, idx) => {
-        const color = layerColorFor(idx);
-        const local = stages[idx + 1].local;
+    activeIdx.forEach((originalIdx, i) => {
+        const angle = angles[originalIdx];
+        const color = layerColorFor(originalIdx);
+        const local = stages[i + 1].local;
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
         pane.style.setProperty('--pane-alpha', String(1 - local));
-        pane.style.setProperty('--pane-dx', `${idx * 5}px`);
-        pane.style.setProperty('--pane-dy', `${idx * -5}px`);
+        pane.style.setProperty('--pane-dx', `${i * 5}px`);
+        pane.style.setProperty('--pane-dy', `${i * -5}px`);
 
         const axisLine = document.createElement('div');
         axisLine.className = 'axis-line';
 
         const badge = document.createElement('div');
         badge.className = 'axis-badge';
-        badge.textContent = `${idx + 1} · ${Math.round(angle)}°`;
+        badge.textContent = `${originalIdx + 1} · ${Math.round(angle)}°`;
 
         pane.appendChild(axisLine);
         pane.appendChild(badge);
@@ -510,7 +545,7 @@ function renderPhoto(activeAngles, stages) {
     });
 }
 
-function renderLadder(stages) {
+function renderLadder(activeIdx, stages) {
     stageLadderEl.innerHTML = '';
     stages.forEach((stage, i) => {
         if (i > 0) {
@@ -523,7 +558,7 @@ function renderLadder(stages) {
         chip.className = 'stage-chip' + (i === stages.length - 1 ? ' final' : '');
         const value = document.createElement('span');
         value.className = 'stage-chip-value';
-        value.textContent = i === 0 ? `I₀ ${fmtPct(stage.value)}` : `L${i} ${fmtPct(stage.value)}`;
+        value.textContent = i === 0 ? `I₀ ${fmtPct(stage.value)}` : `L${activeIdx[i - 1] + 1} ${fmtPct(stage.value)}`;
         chip.appendChild(value);
         if (stage.delta !== null) {
             const delta = document.createElement('span');
@@ -536,11 +571,15 @@ function renderLadder(stages) {
 }
 
 function recomputeAndRender() {
-    const activeAngles = angles.slice(0, layerCount);
-    const stages = computeStages(activeAngles);
+    const activeIdx = [];
+    for (let i = 0; i < layerCount; i++) {
+        if (layerVisible[i]) activeIdx.push(i);
+    }
+    const visibleAngles = activeIdx.map((i) => angles[i]);
+    const stages = computeStages(visibleAngles);
     const total = stages[stages.length - 1].value;
-    renderPhoto(activeAngles, stages);
-    renderLadder(stages);
+    renderPhoto(activeIdx, stages);
+    renderLadder(activeIdx, stages);
     transmissionReadoutEl.textContent = fmtPct(total);
 }
 

@@ -515,25 +515,36 @@ input[type="range"]:focus {
     flex-shrink: 0;
 }
 
-.layer-dial {
-    position: relative;
+.visibility-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 22px;
     height: 22px;
     flex-shrink: 0;
+    padding: 0;
+    border: none;
     border-radius: 50%;
-    border: 2px solid currentColor;
     background: rgba(255, 255, 255, 0.55);
+    color: inherit;
+    cursor: pointer;
 }
 
-.layer-dial::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 78%;
-    height: 2px;
-    background: currentColor;
-    transform: translate(-50%, -50%) rotate(var(--dial-angle, 0deg));
+.visibility-toggle:hover {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.visibility-toggle svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* A hidden layer is still fully editable (so it's ready to go once
+   re-enabled), just visually muted apart from its own eye toggle. */
+.layer-card.hidden-layer .layer-badge .dot,
+.layer-card.hidden-layer .layer-badge span:last-child,
+.layer-card.hidden-layer input {
+    opacity: 0.4;
 }
 
 .layer-card-header .field-number {
