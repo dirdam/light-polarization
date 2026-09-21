@@ -508,13 +508,6 @@ input[type="range"]:focus {
     cursor: default;
 }
 
-.layer-badge .dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
 .visibility-toggle {
     display: inline-flex;
     align-items: center;
@@ -539,7 +532,6 @@ input[type="range"]:focus {
 
 /* A hidden layer is still fully editable (so it's ready to go once
    re-enabled), just visually muted apart from its own eye toggle. */
-.layer-card.hidden-layer .layer-badge .dot,
 .layer-card.hidden-layer .layer-badge span:last-child,
 .layer-card.hidden-layer input {
     opacity: 0.4;
