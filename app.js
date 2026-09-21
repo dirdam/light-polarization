@@ -543,7 +543,7 @@ function polygonClipPath(corners) {
 // stack order — a hidden layer contributes no entry at all, so it's
 // skipped both visually and in the Malus's-law chain (computeStages
 // only ever sees the angles that are actually still in the stack).
-function renderPhoto(activeIdx, stages) {
+function renderPhoto(activeIdx) {
     photoLayersEl.innerHTML = '';
     activeIdx.forEach((originalIdx, i) => {
         const angle = angles[originalIdx];
@@ -585,23 +585,144 @@ function renderPhoto(activeIdx, stages) {
 // progressive intersection — a point only ever receives level k's
 // (semi-transparent black) background if it fell inside every clip from
 // level 1 through k, which is exactly "reached filters 1..k in order".
-function renderDarkening(activeIdx, stages) {
-    photoDarkeningEl.innerHTML = '';
-    let parent = photoDarkeningEl;
-    activeIdx.forEach((originalIdx, i) => {
+//
+// That assumption breaks down once panes are rotated to different
+// angles: a point can be inside pane 1's square and pane 3's square
+// without being inside pane 2's square at all (pane 2 simply doesn't
+// reach that spot), and light there really did skip straight from
+// filter 1 to filter 3 — using filter 1's angle as the reference, not
+// filter 2's. Nesting wrongly gates filter 3's contribution behind
+// filter 2's shape even where filter 2 isn't present.
+//
+// The fix: instead of nesting, decompose the stage into the actual
+// disjoint regions of the arrangement of every visible pane's square,
+// each tagged with exactly *which* panes cover it (in stack order),
+// then render each region once with the correct Malus's-law product
+// for that specific subset — no compositing/nesting tricks needed,
+// each region already carries its own final, correct value.
+function isLeft(a, b, p) {
+    return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) >= 0;
+}
+
+function intersectLine(p1, p2, a, b) {
+    const A1 = p2.y - p1.y, B1 = p1.x - p2.x, C1 = A1 * p1.x + B1 * p1.y;
+    const A2 = b.y - a.y, B2 = a.x - b.x, C2 = A2 * a.x + B2 * a.y;
+    const det = A1 * B2 - A2 * B1;
+    if (Math.abs(det) < 1e-9) return p2;
+    return { x: (B2 * C1 - B1 * C2) / det, y: (A1 * C2 - A2 * C1) / det };
+}
+
+// Keeps the part of a convex polygon on the "inside" (left) of the
+// directed edge a->b — the core Sutherland-Hodgman clip step.
+function clipConvexByHalfPlane(poly, a, b) {
+    const out = [];
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+        const cur = poly[i], prev = poly[(i - 1 + n) % n];
+        const curIn = isLeft(a, b, cur);
+        const prevIn = isLeft(a, b, prev);
+        if (curIn) {
+            if (!prevIn) out.push(intersectLine(prev, cur, a, b));
+            out.push(cur);
+        } else if (prevIn) {
+            out.push(intersectLine(prev, cur, a, b));
+        }
+    }
+    return out;
+}
+
+// Intersection of two convex polygons: clip A against every edge of B.
+function convexIntersect(polyA, polyB) {
+    let result = polyA;
+    for (let i = 0; i < polyB.length && result.length > 0; i++) {
+        result = clipConvexByHalfPlane(result, polyB[i], polyB[(i + 1) % polyB.length]);
+    }
+    return result;
+}
+
+function polygonArea(poly) {
+    let area = 0;
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+        const p1 = poly[i], p2 = poly[(i + 1) % n];
+        area += p1.x * p2.y - p2.x * p1.y;
+    }
+    return Math.abs(area) / 2;
+}
+
+// A \ B for two convex polygons, as up to one convex piece per edge of
+// B: piece i is A clipped to "inside every earlier edge of B, outside
+// edge i" — their union is exactly the part of A that B doesn't cover.
+function convexDifference(polyA, polyB) {
+    const pieces = [];
+    let remaining = polyA;
+    for (let i = 0; i < polyB.length; i++) {
+        if (remaining.length === 0) break;
+        const a = polyB[i], b = polyB[(i + 1) % polyB.length];
+        const outside = clipConvexByHalfPlane(remaining, b, a);
+        if (polygonArea(outside) > 1e-6) pieces.push(outside);
+        remaining = clipConvexByHalfPlane(remaining, a, b);
+    }
+    return pieces;
+}
+
+// Builds the arrangement of every visible pane's square, incrementally:
+// each new pane either extends an existing cell's subset (where they
+// overlap), leaves the rest of that cell untouched (where they don't),
+// or starts a brand-new cell of its own (wherever it lands on ground no
+// earlier pane reached at all).
+function buildRegions(activeIdx) {
+    let cells = [];
+    activeIdx.forEach((originalIdx) => {
         const angle = angles[originalIdx];
-        const local = stages[i + 1].local;
-        // Same reasoning as renderPhoto: offset by the layer's own slot,
-        // so the darkening's shape lines up with the decorative pane's
-        // fan position regardless of which other layers are hidden.
-        const dxPct = originalIdx * FAN_STEP_PCT;
-        const dyPct = -originalIdx * FAN_STEP_PCT;
+        const paneQuad = paneCorners(angle, originalIdx * FAN_STEP_PCT, -originalIdx * FAN_STEP_PCT);
+        const nextCells = [];
+        let remaining = [paneQuad];
+        cells.forEach((cell) => {
+            const overlap = convexIntersect(cell.polygon, paneQuad);
+            if (polygonArea(overlap) > 1e-6) {
+                nextCells.push({ polygon: overlap, subset: [...cell.subset, originalIdx] });
+                remaining = remaining.flatMap((r) => convexDifference(r, cell.polygon));
+            }
+            convexDifference(cell.polygon, paneQuad).forEach((p) => nextCells.push({ polygon: p, subset: cell.subset }));
+        });
+        remaining.forEach((p) => { if (polygonArea(p) > 1e-6) nextCells.push({ polygon: p, subset: [originalIdx] }); });
+        cells = nextCells;
+    });
+    return cells;
+}
+
+// Sequential Malus's law over an arbitrary (already stack-ordered)
+// subset of layers — the same rule as computeStages, just applied to
+// whichever filters actually cover a given region instead of always
+// the full active list.
+function subsetTransmission(subset) {
+    let I = 1;
+    subset.forEach((idx, j) => {
+        if (j === 0) {
+            I *= 0.5;
+        } else {
+            const delta = angles[idx] - angles[subset[j - 1]];
+            const c = Math.cos((delta * Math.PI) / 180);
+            I *= c * c;
+        }
+    });
+    return I;
+}
+
+// Skip slivers too small to matter (fan-offset rounding, near-tangent
+// edges) rather than filling the DOM with imperceptible clipped divs.
+const MIN_RENDERED_REGION_AREA = 1;
+
+function renderDarkening(activeIdx) {
+    photoDarkeningEl.innerHTML = '';
+    buildRegions(activeIdx).forEach((cell) => {
+        if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
         const level = document.createElement('div');
         level.className = 'darkening-level';
-        level.style.clipPath = polygonClipPath(paneCorners(angle, dxPct, dyPct));
-        level.style.background = `rgba(0, 0, 0, ${1 - local})`;
-        parent.appendChild(level);
-        parent = level;
+        level.style.clipPath = polygonClipPath(cell.polygon);
+        level.style.background = `rgba(0, 0, 0, ${1 - subsetTransmission(cell.subset)})`;
+        photoDarkeningEl.appendChild(level);
     });
 }
 
@@ -638,8 +759,8 @@ function recomputeAndRender() {
     const visibleAngles = activeIdx.map((i) => angles[i]);
     const stages = computeStages(visibleAngles);
     const total = stages[stages.length - 1].value;
-    renderPhoto(activeIdx, stages);
-    renderDarkening(activeIdx, stages);
+    renderPhoto(activeIdx);
+    renderDarkening(activeIdx);
     renderLadder(activeIdx, stages);
     transmissionReadoutEl.textContent = fmtPct(total);
 }

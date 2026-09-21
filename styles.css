@@ -219,12 +219,11 @@ header p.intro strong {
     pointer-events: none;
 }
 
-/* One nested div per visible filter, each clipped to that filter's own
-   rotated-square footprint. clip-path on a parent constrains its whole
-   subtree, so nesting these makes the browser compute the progressive
-   intersection for free: a point painted by level k's background has
-   necessarily fallen inside every clip-path from level 1 to k, so it
-   only ever darkens where a filter truly overlaps the ones before it. */
+/* One flat div per region of the arrangement of every visible filter's
+   square (see renderDarkening/buildRegions in app.js) — each already
+   carries its own precomputed, correct darkening for exactly the
+   subset of filters that geometrically covers it, so these sit as
+   plain siblings rather than needing to be nested or composited. */
 .darkening-level {
     position: absolute;
     inset: 0;
