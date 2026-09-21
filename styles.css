@@ -254,8 +254,8 @@ header p.intro strong {
 .polarizer-pane .axis-badge {
     position: absolute;
     /* Anchored on the corner-to-center diagonal, close to the corner. */
-    top: 80%;
-    left: 80%;
+    top: 10%;
+    left: 10%;
     font-size: 0.68em;
     font-weight: 700;
     padding: 2px 7px;
