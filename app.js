@@ -367,11 +367,16 @@ function buildLayerCard(idx) {
         recomputeAndRender();
     });
 
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = color;
+
     const label = document.createElement('span');
     label.style.color = 'var(--text-main)';
     label.textContent = layerLabelText(idx);
 
     badge.appendChild(visToggle);
+    badge.appendChild(dot);
     badge.appendChild(label);
 
     const moveButtons = document.createElement('div');
