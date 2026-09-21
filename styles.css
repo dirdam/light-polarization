@@ -192,13 +192,19 @@ header p.intro strong {
     box-shadow: inset 0 0 0 1px var(--panel-border);
 }
 
+/* The "light source" behind the filter stack: a radiating sunburst
+   rather than a photo, since it's the incoming unpolarized light being
+   demonstrated, not a picture — same conic-gradient technique as the
+   page's decorative corner medallion, just vivid and full-bleed here. */
 .photo-base {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    display: block;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+        repeating-conic-gradient(from 0deg, var(--accent) 0deg 7.5deg, var(--accent-2) 7.5deg 15deg);
+    background-color: var(--surface-1);
 }
 
 .photo-layers {
