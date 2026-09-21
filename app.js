@@ -481,6 +481,7 @@ onLangChange(renderLayerControls);
 // --- Photo effect + transmission ladder ---------------------------------
 const photoLayersEl = document.getElementById('photoLayers');
 const photoDarkeningEl = document.getElementById('photoDarkening');
+const photoBadgesEl = document.getElementById('photoBadges');
 const stageLadderEl = document.getElementById('stageLadder');
 const transmissionReadoutEl = document.getElementById('transmissionReadout');
 
@@ -525,37 +526,16 @@ function polygonClipPath(corners) {
 // stack order — a hidden layer contributes no entry at all, so it's
 // skipped both visually and in the Malus's-law chain (computeStages
 // only ever sees the angles that are actually still in the stack).
-// The border's brightness stands in for depth in the light path — dim
-// for the layer closest to the light source (first hit), bright for
-// the one closest to the viewer (last hit, i.e. highest i among the
-// currently *visible* layers) — a hidden layer truly drops out of the
-// path, so this is based on visible position, not the layer's own slot.
-const BORDER_ALPHA_FAR = 0.15;
-const BORDER_ALPHA_NEAR = 0.85;
-
 function renderPhoto(activeIdx) {
     photoLayersEl.innerHTML = '';
+    photoBadgesEl.innerHTML = '';
     activeIdx.forEach((originalIdx, i) => {
         const angle = angles[originalIdx];
         const color = layerColorFor(originalIdx);
-        const depthFrac = activeIdx.length > 1 ? i / (activeIdx.length - 1) : 1;
-        const borderAlpha = BORDER_ALPHA_FAR + (BORDER_ALPHA_NEAR - BORDER_ALPHA_FAR) * depthFrac;
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
-        pane.style.setProperty('--pane-border-alpha', String(borderAlpha));
-        pane.style.setProperty('--pane-sheen-alpha', String(0.04 + 0.22 * depthFrac));
-        // A stronger, more standard depth cue than border brightness
-        // alone: the pane closest to the viewer casts a bigger, softer,
-        // more offset shadow (as if lifted toward you); the one closest
-        // to the light source sits nearly flat. Doesn't touch the
-        // pane's actual size/position, so it can't create the kind of
-        // geometry-vs-visual mismatch the border-radius chamfer did.
-        const shadowBlur = 4 + 22 * depthFrac;
-        const shadowOffsetY = 1 + 9 * depthFrac;
-        const shadowAlpha = 0.08 + 0.3 * depthFrac;
-        pane.style.boxShadow = `0 ${shadowOffsetY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowAlpha})`;
         // Offset by the layer's own slot (originalIdx), not its position
         // among only the visible ones (i) — so hiding layer 2 doesn't
         // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
@@ -571,14 +551,27 @@ function renderPhoto(activeIdx) {
 
         const axisLine = document.createElement('div');
         axisLine.className = 'axis-line';
+        pane.appendChild(axisLine);
+        photoLayersEl.appendChild(pane);
+
+        // The badge lives in a separate ghost holder above the darkening
+        // layer (same box/transform as the pane, just no border/fill),
+        // so its label stays legible even in a fully-blocked region
+        // (e.g. the Crossed preset is ~0% transmission across its whole
+        // shared area, which would otherwise paint solid black over it).
+        const badgeHolder = document.createElement('div');
+        badgeHolder.className = 'badge-holder';
+        badgeHolder.style.setProperty('--pane-angle', `${angle}deg`);
+        badgeHolder.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+        badgeHolder.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
 
         const badge = document.createElement('div');
         badge.className = 'axis-badge';
+        badge.style.setProperty('--pane-color', color);
         badge.textContent = `${originalIdx + 1} · ${Math.round(angle)}°`;
 
-        pane.appendChild(axisLine);
-        pane.appendChild(badge);
-        photoLayersEl.appendChild(pane);
+        badgeHolder.appendChild(badge);
+        photoBadgesEl.appendChild(badgeHolder);
     });
 }
 

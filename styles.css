@@ -219,6 +219,26 @@ header p.intro strong {
     pointer-events: none;
 }
 
+.photo-badges {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* A ghost duplicate of .polarizer-pane's own box/transform (no border,
+   fill or shadow) purely to host that pane's badge above the darkening
+   layer — otherwise a fully-blocked region (e.g. the Crossed preset,
+   which is ~0% transmission across its whole shared area) would paint
+   fully opaque black over the badge and make its label unreadable. */
+.badge-holder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 70.7107%;
+    height: 70.7107%;
+    transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
+}
+
 /* One flat div per region of the arrangement of every visible filter's
    square (see renderDarkening/buildRegions in app.js) — each already
    carries its own precomputed, correct darkening for exactly the
@@ -246,17 +266,14 @@ header p.intro strong {
     /* Sharp corners, matching the actual (sharp) shape used for the
        darkening geometry in #photoDarkening — a rounded border here
        would visually promise a shape this pane doesn't actually have. */
-    /* Brightness stands in for depth in the light path — dim near the
-       light source, bright near the viewer — since the flat rotated
-       squares otherwise give no depth cue on their own. */
-    border: 1px solid rgba(255, 255, 255, var(--pane-border-alpha, 0.4));
-    /* Purely decorative glass sheen — the actual darkening is computed
-       separately per filter-overlap region and rendered in
-       #photoDarkening, not painted here. Its highlight also brightens
-       with depth (--pane-sheen-alpha), same reasoning as the border.
-       box-shadow is set inline per pane (depth-based elevation) and
-       overrides this fallback. */
-    background: linear-gradient(135deg, rgba(255, 255, 255, var(--pane-sheen-alpha, 0.12)), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    /* Purely decorative glass sheen — the border and this fill both sit
+       *underneath* #photoDarkening in paint order (see index.html), so
+       the same per-region transmission that darkens the light source
+       darkens these too — a filter's own border reads as dimmer exactly
+       where the filters before it have already blocked most of the
+       light, instead of floating on top untouched. */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
     transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
 }
@@ -272,7 +289,7 @@ header p.intro strong {
     transform: translate(-50%, -50%);
 }
 
-.polarizer-pane .axis-badge {
+.badge-holder .axis-badge {
     position: absolute;
     /* On the pane's own horizontal midline, near the left edge — lines
        up with the axis-line's height so the label reads as belonging
