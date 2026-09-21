@@ -479,8 +479,7 @@ function renderLayerControls() {
 onLangChange(renderLayerControls);
 
 // --- Photo effect + transmission ladder ---------------------------------
-const photoLayersEl = document.getElementById('photoLayers');
-const photoDarkeningEl = document.getElementById('photoDarkening');
+const photoStackEl = document.getElementById('photoStack');
 const photoBadgesEl = document.getElementById('photoBadges');
 const stageLadderEl = document.getElementById('stageLadder');
 const transmissionReadoutEl = document.getElementById('transmissionReadout');
@@ -520,59 +519,6 @@ function paneCorners(angleDeg, dxPct, dyPct) {
 
 function polygonClipPath(corners) {
     return `polygon(${corners.map((c) => `${c.x}% ${c.y}%`).join(', ')})`;
-}
-
-// `activeIdx` holds the *original* card index of each visible layer, in
-// stack order — a hidden layer contributes no entry at all, so it's
-// skipped both visually and in the Malus's-law chain (computeStages
-// only ever sees the angles that are actually still in the stack).
-function renderPhoto(activeIdx) {
-    photoLayersEl.innerHTML = '';
-    photoBadgesEl.innerHTML = '';
-    activeIdx.forEach((originalIdx, i) => {
-        const angle = angles[originalIdx];
-        const color = layerColorFor(originalIdx);
-        const pane = document.createElement('div');
-        pane.className = 'polarizer-pane';
-        pane.style.setProperty('--pane-angle', `${angle}deg`);
-        pane.style.setProperty('--pane-color', color);
-        // Offset by the layer's own slot (originalIdx), not its position
-        // among only the visible ones (i) — so hiding layer 2 doesn't
-        // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
-        // own height and stays put when layer 2 is re-enabled.
-        // --pane-dx/dy are consumed inside a `translate()` on the pane's
-        // OWN transform, where percentages resolve against the pane's
-        // own box (1/sqrt(2) of the stage) rather than the stage itself —
-        // multiplying by sqrt(2) here converts the stage-relative
-        // FAN_STEP_PCT into that frame, so it lines up with the same
-        // offset used for the darkening clip-path below.
-        pane.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
-        pane.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
-
-        const axisLine = document.createElement('div');
-        axisLine.className = 'axis-line';
-        pane.appendChild(axisLine);
-        photoLayersEl.appendChild(pane);
-
-        // The badge lives in a separate ghost holder above the darkening
-        // layer (same box/transform as the pane, just no border/fill),
-        // so its label stays legible even in a fully-blocked region
-        // (e.g. the Crossed preset is ~0% transmission across its whole
-        // shared area, which would otherwise paint solid black over it).
-        const badgeHolder = document.createElement('div');
-        badgeHolder.className = 'badge-holder';
-        badgeHolder.style.setProperty('--pane-angle', `${angle}deg`);
-        badgeHolder.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
-        badgeHolder.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
-
-        const badge = document.createElement('div');
-        badge.className = 'axis-badge';
-        badge.style.setProperty('--pane-color', color);
-        badge.textContent = `${originalIdx + 1} · ${Math.round(angle)}°`;
-
-        badgeHolder.appendChild(badge);
-        photoBadgesEl.appendChild(badgeHolder);
-    });
 }
 
 // The actual darkening: one nested div per visible layer, each clipped
@@ -692,9 +638,15 @@ function convexDifference(polyA, polyB) {
 // each new pane either extends an existing cell's subset (where they
 // overlap), leaves the rest of that cell untouched (where they don't),
 // or starts a brand-new cell of its own (wherever it lands on ground no
-// earlier pane reached at all).
-function buildRegions(activeIdx) {
+// earlier pane reached at all). Returns a SNAPSHOT of the region list
+// after each layer is folded in — snapshots[i] is exactly the correct
+// darkening "as seen right after filter activeIdx[i]", which
+// renderPhotoStack interleaves with that same layer's own pane, so a
+// layer's border/axis is affected by itself and everything before it,
+// but not yet by anything stacked after it.
+function buildRegionSnapshots(activeIdx) {
     let cells = [];
+    const snapshots = [];
     activeIdx.forEach((originalIdx) => {
         const angle = angles[originalIdx];
         const paneQuad = paneCorners(angle, originalIdx * FAN_STEP_PCT, -originalIdx * FAN_STEP_PCT);
@@ -710,8 +662,9 @@ function buildRegions(activeIdx) {
         });
         remaining.forEach((p) => { if (polygonArea(p) > 1e-6) nextCells.push({ polygon: p, subset: [originalIdx] }); });
         cells = nextCells;
+        snapshots.push(cells);
     });
-    return cells;
+    return snapshots;
 }
 
 // Sequential Malus's law over an arbitrary (already stack-ordered)
@@ -736,15 +689,73 @@ function subsetTransmission(subset) {
 // edges) rather than filling the DOM with imperceptible clipped divs.
 const MIN_RENDERED_REGION_AREA = 1;
 
-function renderDarkening(activeIdx) {
-    photoDarkeningEl.innerHTML = '';
-    buildRegions(activeIdx).forEach((cell) => {
-        if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
-        const level = document.createElement('div');
-        level.className = 'darkening-level';
-        level.style.clipPath = polygonClipPath(cell.polygon);
-        level.style.background = `rgba(0, 0, 0, ${1 - subsetTransmission(cell.subset)})`;
-        photoDarkeningEl.appendChild(level);
+// `activeIdx` holds the *original* card index of each visible layer, in
+// stack order — a hidden layer contributes no entry at all, so it's
+// skipped both visually and in the Malus's-law chain (computeStages
+// only ever sees the angles that are actually still in the stack).
+//
+// Interleaves each layer's darkening group with its own pane, in stack
+// order: background, filter 1's darkening, pane 1 (border+axis),
+// filter 2's darkening, pane 2, ... — so a layer's border/axis is
+// dimmed by itself and everything before it, but nothing after it.
+// The topmost (last) layer ends up fully bright, since nothing paints
+// over it afterward.
+function renderPhotoStack(activeIdx) {
+    photoStackEl.innerHTML = '';
+    photoBadgesEl.innerHTML = '';
+    const snapshots = buildRegionSnapshots(activeIdx);
+    activeIdx.forEach((originalIdx, i) => {
+        snapshots[i].forEach((cell) => {
+            if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
+            const level = document.createElement('div');
+            level.className = 'darkening-level';
+            level.style.clipPath = polygonClipPath(cell.polygon);
+            level.style.background = `rgba(0, 0, 0, ${1 - subsetTransmission(cell.subset)})`;
+            photoStackEl.appendChild(level);
+        });
+
+        const angle = angles[originalIdx];
+        const color = layerColorFor(originalIdx);
+        const pane = document.createElement('div');
+        pane.className = 'polarizer-pane';
+        pane.style.setProperty('--pane-angle', `${angle}deg`);
+        pane.style.setProperty('--pane-color', color);
+        // Offset by the layer's own slot (originalIdx), not its position
+        // among only the visible ones (i) — so hiding layer 2 doesn't
+        // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
+        // own height and stays put when layer 2 is re-enabled.
+        // --pane-dx/dy are consumed inside a `translate()` on the pane's
+        // OWN transform, where percentages resolve against the pane's
+        // own box (1/sqrt(2) of the stage) rather than the stage itself —
+        // multiplying by sqrt(2) here converts the stage-relative
+        // FAN_STEP_PCT into that frame, so it lines up with the same
+        // offset used for the darkening clip-path above.
+        pane.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+        pane.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+
+        const axisLine = document.createElement('div');
+        axisLine.className = 'axis-line';
+        pane.appendChild(axisLine);
+        photoStackEl.appendChild(pane);
+
+        // The badge lives in a separate ghost holder above everything
+        // (same box/transform as the pane, just no border/fill), so its
+        // label stays legible even in a fully-blocked region (e.g. the
+        // Crossed preset is ~0% transmission across its whole shared
+        // area, which would otherwise paint solid black over it).
+        const badgeHolder = document.createElement('div');
+        badgeHolder.className = 'badge-holder';
+        badgeHolder.style.setProperty('--pane-angle', `${angle}deg`);
+        badgeHolder.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+        badgeHolder.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+
+        const badge = document.createElement('div');
+        badge.className = 'axis-badge';
+        badge.style.setProperty('--pane-color', color);
+        badge.textContent = `${originalIdx + 1} · ${Math.round(angle)}°`;
+
+        badgeHolder.appendChild(badge);
+        photoBadgesEl.appendChild(badgeHolder);
     });
 }
 
@@ -781,8 +792,7 @@ function recomputeAndRender() {
     const visibleAngles = activeIdx.map((i) => angles[i]);
     const stages = computeStages(visibleAngles);
     const total = stages[stages.length - 1].value;
-    renderPhoto(activeIdx);
-    renderDarkening(activeIdx);
+    renderPhotoStack(activeIdx);
     renderLadder(activeIdx, stages);
     transmissionReadoutEl.textContent = fmtPct(total);
 }

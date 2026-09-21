@@ -207,13 +207,14 @@ header p.intro strong {
     background-color: var(--surface-1);
 }
 
-.photo-layers {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-
-.photo-darkening {
+/* Holds each layer's darkening regions and its pane (border + axis-line)
+   interleaved in stack order — background, filter 1's darkening,
+   pane 1's border+axis, filter 2's darkening, pane 2's border+axis,
+   and so on — so a given layer's own border/axis is affected only by
+   the filters at or before it, not by anything stacked after it. The
+   topmost (last) layer ends up fully bright, since nothing paints
+   over it afterward — a real depth cue instead of an artificial one. */
+.photo-stack {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -239,11 +240,13 @@ header p.intro strong {
     transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
 }
 
-/* One flat div per region of the arrangement of every visible filter's
-   square (see renderDarkening/buildRegions in app.js) — each already
-   carries its own precomputed, correct darkening for exactly the
-   subset of filters that geometrically covers it, so these sit as
-   plain siblings rather than needing to be nested or composited. */
+/* One flat div per region of the arrangement of filters *up through*
+   a given depth (see renderPhotoStack/buildRegionSnapshots in app.js)
+   — each already carries its own precomputed, correct darkening for
+   exactly the subset of filters that geometrically covers it at that
+   depth, so these sit as plain siblings rather than needing to be
+   nested or composited. One such group is interleaved before each
+   layer's own pane in .photo-stack. */
 .darkening-level {
     position: absolute;
     inset: 0;
@@ -264,15 +267,15 @@ header p.intro strong {
     width: 70.7107%;
     height: 70.7107%;
     /* Sharp corners, matching the actual (sharp) shape used for the
-       darkening geometry in #photoDarkening — a rounded border here
+       darkening geometry in .photo-stack — a rounded border here
        would visually promise a shape this pane doesn't actually have. */
     border: 1px solid var(--pane-color, var(--accent));
-    /* Purely decorative glass sheen — the border and this fill both sit
-       *underneath* #photoDarkening in paint order (see index.html), so
-       the same per-region transmission that darkens the light source
-       darkens these too — a filter's own border reads as dimmer exactly
-       where the filters before it have already blocked most of the
-       light, instead of floating on top untouched. */
+    /* Purely decorative glass sheen. This pane is interleaved right
+       after its own layer's darkening group in .photo-stack (see
+       renderPhotoStack in app.js), so it's affected by that layer's
+       own filter and every filter before it, but not by anything
+       stacked after it — the last (topmost) layer's border ends up
+       fully bright, a real depth cue instead of an artificial one. */
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
     transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
@@ -285,8 +288,8 @@ header p.intro strong {
     width: 100%;
     height: 2px;
     /* Full, unmodified layer color — same brightness as the border,
-       not artificially dimmed. Whatever darkening applies still comes
-       from #photoDarkening painting on top afterward, unchanged. */
+       not artificially dimmed. It's affected by the darkening the same
+       way the border is (see .polarizer-pane above). */
     background: var(--pane-color, var(--accent));
     transform: translate(-50%, -50%);
 }
