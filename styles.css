@@ -213,6 +213,23 @@ header p.intro strong {
     pointer-events: none;
 }
 
+.photo-darkening {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* One nested div per visible filter, each clipped to that filter's own
+   rotated-square footprint. clip-path on a parent constrains its whole
+   subtree, so nesting these makes the browser compute the progressive
+   intersection for free: a point painted by level k's background has
+   necessarily fallen inside every clip-path from level 1 to k, so it
+   only ever darkens where a filter truly overlaps the ones before it. */
+.darkening-level {
+    position: absolute;
+    inset: 0;
+}
+
 /* Each polarizing filter is a translucent square pane sized at
    1/sqrt(2) of the stage — the exact size whose own diagonal equals
    the stage's side, so however it's rotated, its corners sweep around
@@ -229,13 +246,11 @@ header p.intro strong {
     height: 70.7107%;
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.4);
-    /* The flat black wash (at this filter's own --pane-alpha, i.e. the
-       fraction of light *it* blocks) is what actually darkens the light
-       source — only inside this pane's own footprint, not the whole
-       stage. The gradient above it is just a decorative glass sheen. */
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%),
-        rgba(0, 0, 0, var(--pane-alpha, 0));
+    /* Purely decorative glass sheen — the actual darkening lives in
+       #photoDarkening's nested clip-path chain, not here, so it's
+       confined to each filter's true overlap with the ones before it
+       rather than painted uniformly across this whole square. */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
     transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
 }

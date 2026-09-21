@@ -498,6 +498,7 @@ onLangChange(renderLayerControls);
 
 // --- Photo effect + transmission ladder ---------------------------------
 const photoLayersEl = document.getElementById('photoLayers');
+const photoDarkeningEl = document.getElementById('photoDarkening');
 const stageLadderEl = document.getElementById('stageLadder');
 const transmissionReadoutEl = document.getElementById('transmissionReadout');
 
@@ -506,14 +507,38 @@ function fmtPct(v) {
     return (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%';
 }
 
-// Each pane darkens the light source by exactly the fraction *it* blocks
-// (stage.local), not the cumulative total — so the darkening only shows
-// up where a filter's own square footprint actually is. Stacking N
-// translucent panes multiplies their (1-alpha) factors together via
-// ordinary alpha compositing, which reproduces the correct cumulative
-// transmission wherever all N happen to overlap, and the correct partial
-// result wherever fewer of them do — the sunburst outside every pane's
-// footprint (the stage's corners) stays untouched at full brightness.
+// Every pane is a square sized at 1/sqrt(2) of the stage, so its half-
+// diagonal — the distance from its own center to each of its corners —
+// is exactly 50% of the stage, regardless of rotation. Stacking offsets
+// are expressed in that same stage-relative percentage, one step per
+// layer index.
+const PANE_HALF_DIAGONAL_PCT = 50;
+const FAN_STEP_PCT = 1.2;
+
+// The 4 corners of a pane, in stage-relative percentages, given its own
+// rotation and its (stage-relative) center offset. Angles are measured
+// clockwise from the positive x-axis with no extra sign flip, matching
+// how CSS's own rotate(deg) already turns things on screen (y grows
+// downward), so a corner computed here lines up exactly with where the
+// visually-rotated decorative pane really is.
+function paneCorners(angleDeg, dxPct, dyPct) {
+    const cx = 50 + dxPct;
+    const cy = 50 + dyPct;
+    const corners = [];
+    for (let k = 0; k < 4; k++) {
+        const phi = ((-45 + 90 * k + angleDeg) * Math.PI) / 180;
+        corners.push({
+            x: cx + PANE_HALF_DIAGONAL_PCT * Math.cos(phi),
+            y: cy + PANE_HALF_DIAGONAL_PCT * Math.sin(phi),
+        });
+    }
+    return corners;
+}
+
+function polygonClipPath(corners) {
+    return `polygon(${corners.map((c) => `${c.x}% ${c.y}%`).join(', ')})`;
+}
+
 // `activeIdx` holds the *original* card index of each visible layer, in
 // stack order — a hidden layer contributes no entry at all, so it's
 // skipped both visually and in the Malus's-law chain (computeStages
@@ -523,14 +548,18 @@ function renderPhoto(activeIdx, stages) {
     activeIdx.forEach((originalIdx, i) => {
         const angle = angles[originalIdx];
         const color = layerColorFor(originalIdx);
-        const local = stages[i + 1].local;
         const pane = document.createElement('div');
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
-        pane.style.setProperty('--pane-alpha', String(1 - local));
-        pane.style.setProperty('--pane-dx', `${i * 5}px`);
-        pane.style.setProperty('--pane-dy', `${i * -5}px`);
+        // --pane-dx/dy are consumed inside a `translate()` on the pane's
+        // OWN transform, where percentages resolve against the pane's
+        // own box (1/sqrt(2) of the stage) rather than the stage itself —
+        // multiplying by sqrt(2) here converts the stage-relative
+        // FAN_STEP_PCT into that frame, so it lines up with the same
+        // offset used for the darkening clip-path below.
+        pane.style.setProperty('--pane-dx', `${i * FAN_STEP_PCT * Math.SQRT2}%`);
+        pane.style.setProperty('--pane-dy', `${-i * FAN_STEP_PCT * Math.SQRT2}%`);
 
         const axisLine = document.createElement('div');
         axisLine.className = 'axis-line';
@@ -542,6 +571,30 @@ function renderPhoto(activeIdx, stages) {
         pane.appendChild(axisLine);
         pane.appendChild(badge);
         photoLayersEl.appendChild(pane);
+    });
+}
+
+// The actual darkening: one nested div per visible layer, each clipped
+// to that layer's own rotated-square footprint (see paneCorners). A
+// parent's clip-path constrains its whole subtree the way overflow:
+// hidden does, so nesting them makes the browser compute the
+// progressive intersection — a point only ever receives level k's
+// (semi-transparent black) background if it fell inside every clip from
+// level 1 through k, which is exactly "reached filters 1..k in order".
+function renderDarkening(activeIdx, stages) {
+    photoDarkeningEl.innerHTML = '';
+    let parent = photoDarkeningEl;
+    activeIdx.forEach((originalIdx, i) => {
+        const angle = angles[originalIdx];
+        const local = stages[i + 1].local;
+        const dxPct = i * FAN_STEP_PCT;
+        const dyPct = -i * FAN_STEP_PCT;
+        const level = document.createElement('div');
+        level.className = 'darkening-level';
+        level.style.clipPath = polygonClipPath(paneCorners(angle, dxPct, dyPct));
+        level.style.background = `rgba(0, 0, 0, ${1 - local})`;
+        parent.appendChild(level);
+        parent = level;
     });
 }
 
@@ -579,6 +632,7 @@ function recomputeAndRender() {
     const stages = computeStages(visibleAngles);
     const total = stages[stages.length - 1].value;
     renderPhoto(activeIdx, stages);
+    renderDarkening(activeIdx, stages);
     renderLadder(activeIdx, stages);
     transmissionReadoutEl.textContent = fmtPct(total);
 }
