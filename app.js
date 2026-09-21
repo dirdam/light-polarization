@@ -620,6 +620,31 @@ function intersectLine(p1, p2, a, b) {
     return { x: (B2 * C1 - B1 * C2) / det, y: (A1 * C2 - A2 * C1) / det };
 }
 
+// Repeated clipping tends to place a new intersection point almost
+// exactly on top of an existing vertex; that near-zero-length edge then
+// makes the *next* clip's isLeft test ambiguous under floating point,
+// which was corrupting the arrangement at higher layer counts (verified:
+// regions started overlapping each other, and the number of regions
+// blew up combinatorially, exactly where these near-duplicate vertices
+// first appeared). Merging consecutive vertices closer than a small
+// epsilon after every clip stops this from ever compounding.
+const VERTEX_MERGE_EPS = 1e-4;
+
+function simplifyPolygon(poly) {
+    if (poly.length < 3) return poly;
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+        const p = poly[i];
+        const prev = out[out.length - 1];
+        if (!prev || Math.hypot(p.x - prev.x, p.y - prev.y) > VERTEX_MERGE_EPS) out.push(p);
+    }
+    if (out.length > 1) {
+        const first = out[0], last = out[out.length - 1];
+        if (Math.hypot(first.x - last.x, first.y - last.y) <= VERTEX_MERGE_EPS) out.pop();
+    }
+    return out.length >= 3 ? out : [];
+}
+
 // Keeps the part of a convex polygon on the "inside" (left) of the
 // directed edge a->b — the core Sutherland-Hodgman clip step.
 function clipConvexByHalfPlane(poly, a, b) {
@@ -636,7 +661,7 @@ function clipConvexByHalfPlane(poly, a, b) {
             out.push(intersectLine(prev, cur, a, b));
         }
     }
-    return out;
+    return simplifyPolygon(out);
 }
 
 // Intersection of two convex polygons: clip A against every edge of B.
@@ -728,7 +753,11 @@ function renderDarkening(activeIdx) {
     // stage-relative percentage, so the chamfer tracks the actual
     // rounded corner regardless of viewport size.
     const stageWidthPx = stageEl.clientWidth || 1;
-    const chamferPct = (PANE_BORDER_RADIUS_PX / stageWidthPx) * 100;
+    // A chamfer of exactly 0 (both cut points collapsing onto the sharp
+    // corner) is degenerate even with vertex merging — never actually
+    // reachable here since PANE_BORDER_RADIUS_PX is a positive constant,
+    // but clamped anyway as cheap insurance.
+    const chamferPct = Math.max((PANE_BORDER_RADIUS_PX / stageWidthPx) * 100, 0.05);
     buildRegions(activeIdx, chamferPct).forEach((cell) => {
         if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
         const level = document.createElement('div');
