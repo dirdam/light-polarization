@@ -552,14 +552,18 @@ function renderPhoto(activeIdx, stages) {
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
+        // Offset by the layer's own slot (originalIdx), not its position
+        // among only the visible ones (i) — so hiding layer 2 doesn't
+        // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
+        // own height and stays put when layer 2 is re-enabled.
         // --pane-dx/dy are consumed inside a `translate()` on the pane's
         // OWN transform, where percentages resolve against the pane's
         // own box (1/sqrt(2) of the stage) rather than the stage itself —
         // multiplying by sqrt(2) here converts the stage-relative
         // FAN_STEP_PCT into that frame, so it lines up with the same
         // offset used for the darkening clip-path below.
-        pane.style.setProperty('--pane-dx', `${i * FAN_STEP_PCT * Math.SQRT2}%`);
-        pane.style.setProperty('--pane-dy', `${-i * FAN_STEP_PCT * Math.SQRT2}%`);
+        pane.style.setProperty('--pane-dx', `${originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
+        pane.style.setProperty('--pane-dy', `${-originalIdx * FAN_STEP_PCT * Math.SQRT2}%`);
 
         const axisLine = document.createElement('div');
         axisLine.className = 'axis-line';
@@ -587,8 +591,11 @@ function renderDarkening(activeIdx, stages) {
     activeIdx.forEach((originalIdx, i) => {
         const angle = angles[originalIdx];
         const local = stages[i + 1].local;
-        const dxPct = i * FAN_STEP_PCT;
-        const dyPct = -i * FAN_STEP_PCT;
+        // Same reasoning as renderPhoto: offset by the layer's own slot,
+        // so the darkening's shape lines up with the decorative pane's
+        // fan position regardless of which other layers are hidden.
+        const dxPct = originalIdx * FAN_STEP_PCT;
+        const dyPct = -originalIdx * FAN_STEP_PCT;
         const level = document.createElement('div');
         level.className = 'darkening-level';
         level.style.clipPath = polygonClipPath(paneCorners(angle, dxPct, dyPct));
