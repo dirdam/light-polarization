@@ -483,8 +483,8 @@ function renderPhoto(activeAngles) {
         pane.className = 'polarizer-pane';
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
-        pane.style.setProperty('--pane-dx', `${idx * 2}px`);
-        pane.style.setProperty('--pane-dy', `${idx * -2}px`);
+        pane.style.setProperty('--pane-dx', `${idx * 5}px`);
+        pane.style.setProperty('--pane-dy', `${idx * -5}px`);
 
         const axisLine = document.createElement('div');
         axisLine.className = 'axis-line';

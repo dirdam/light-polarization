@@ -213,18 +213,25 @@ header p.intro strong {
     pointer-events: none;
 }
 
-/* Each polarizing filter is drawn as a translucent glass pane sitting
-   slightly offset from the last (a small per-layer translate), so the
-   stack reads as physical sheets fanned in viewing order, closest-to-
+/* Each polarizing filter is a translucent square pane sized at
+   1/sqrt(2) of the stage — the exact size whose own diagonal equals
+   the stage's side, so however it's rotated, its corners sweep around
+   but never leave the visible square. Panes sit slightly offset from
+   each other (a small per-layer translate, applied before the
+   rotation so the offset stays a consistent on-screen fan rather than
+   spinning with each pane), stacked in viewing order, closest-to-
    viewer on top — matching the light path: layer 1 first, layer N last. */
 .polarizer-pane {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    width: 70.7107%;
+    height: 70.7107%;
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
-    transform: translate(var(--pane-dx, 0px), var(--pane-dy, 0px));
+    transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
 }
 
 .polarizer-pane .axis-line {
@@ -235,7 +242,7 @@ header p.intro strong {
     height: 2px;
     background: var(--pane-color, var(--accent));
     opacity: 0.85;
-    transform: translate(-50%, -50%) rotate(var(--pane-angle, 0deg));
+    transform: translate(-50%, -50%);
 }
 
 .polarizer-pane .axis-badge {
@@ -249,6 +256,8 @@ header p.intro strong {
     color: #fff;
     background: var(--pane-color, var(--accent));
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    /* Counter-rotate so the label stays legible while its pane spins. */
+    transform: rotate(calc(-1 * var(--pane-angle, 0deg)));
 }
 
 .photo-scrim {
