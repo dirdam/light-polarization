@@ -252,8 +252,11 @@ header p.intro strong {
     border: 1px solid rgba(255, 255, 255, var(--pane-border-alpha, 0.4));
     /* Purely decorative glass sheen — the actual darkening is computed
        separately per filter-overlap region and rendered in
-       #photoDarkening, not painted here. */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
+       #photoDarkening, not painted here. Its highlight also brightens
+       with depth (--pane-sheen-alpha), same reasoning as the border.
+       box-shadow is set inline per pane (depth-based elevation) and
+       overrides this fallback. */
+    background: linear-gradient(135deg, rgba(255, 255, 255, var(--pane-sheen-alpha, 0.12)), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.05) 100%);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
     transform: translate(-50%, -50%) translate(var(--pane-dx, 0px), var(--pane-dy, 0px)) rotate(var(--pane-angle, 0deg));
 }

@@ -545,6 +545,17 @@ function renderPhoto(activeIdx) {
         pane.style.setProperty('--pane-angle', `${angle}deg`);
         pane.style.setProperty('--pane-color', color);
         pane.style.setProperty('--pane-border-alpha', String(borderAlpha));
+        pane.style.setProperty('--pane-sheen-alpha', String(0.04 + 0.22 * depthFrac));
+        // A stronger, more standard depth cue than border brightness
+        // alone: the pane closest to the viewer casts a bigger, softer,
+        // more offset shadow (as if lifted toward you); the one closest
+        // to the light source sits nearly flat. Doesn't touch the
+        // pane's actual size/position, so it can't create the kind of
+        // geometry-vs-visual mismatch the border-radius chamfer did.
+        const shadowBlur = 4 + 22 * depthFrac;
+        const shadowOffsetY = 1 + 9 * depthFrac;
+        const shadowAlpha = 0.08 + 0.3 * depthFrac;
+        pane.style.boxShadow = `0 ${shadowOffsetY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowAlpha})`;
         // Offset by the layer's own slot (originalIdx), not its position
         // among only the visible ones (i) — so hiding layer 2 doesn't
         // shift layer 3 into layer 2's spot in the fan; layer 3 keeps its
