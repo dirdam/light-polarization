@@ -251,6 +251,47 @@ function moveLayer(from, to) {
     recomputeAndRender();
 }
 
+// One drag session at a time: which layer started it, and (as the
+// pointer moves) which card it's currently hovering over. The actual
+// reorder only happens once, on release.
+let layerDrag = null;
+
+function startLayerDrag(fromIdx, sourceCard) {
+    layerDrag = { fromIdx, overCard: null };
+    sourceCard.classList.add('dragging');
+    document.addEventListener('pointermove', onLayerDragMove);
+    document.addEventListener('pointerup', endLayerDrag);
+    document.addEventListener('pointercancel', endLayerDrag);
+}
+
+function onLayerDragMove(e) {
+    if (!layerDrag) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const overCard = el ? el.closest('.layer-card') : null;
+    const validTarget = overCard && overCard.parentElement === layerControlsContainer ? overCard : null;
+    if (layerDrag.overCard && layerDrag.overCard !== validTarget) {
+        layerDrag.overCard.classList.remove('drag-over');
+    }
+    if (validTarget) validTarget.classList.add('drag-over');
+    layerDrag.overCard = validTarget;
+}
+
+function endLayerDrag() {
+    if (!layerDrag) return;
+    document.removeEventListener('pointermove', onLayerDragMove);
+    document.removeEventListener('pointerup', endLayerDrag);
+    document.removeEventListener('pointercancel', endLayerDrag);
+    const { fromIdx, overCard } = layerDrag;
+    layerDrag = null;
+    layerControlsContainer.querySelectorAll('.layer-card').forEach((c) => {
+        c.classList.remove('dragging', 'drag-over');
+    });
+    if (overCard) {
+        const toIdx = parseInt(overCard.dataset.index, 10);
+        if (!Number.isNaN(toIdx)) moveLayer(fromIdx, toIdx);
+    }
+}
+
 // --- Layer-count field: slider + synced number input --------------------
 const layerCountSlider = document.getElementById('layerCountSlider');
 const layerCountNumber = document.getElementById('layerCountNumber');
@@ -289,7 +330,7 @@ function buildLayerCard(idx) {
 
     const card = document.createElement('div');
     card.className = 'layer-card';
-    card.draggable = true;
+    card.dataset.index = String(idx);
 
     const header = document.createElement('div');
     header.className = 'layer-card-header';
@@ -348,27 +389,15 @@ function buildLayerCard(idx) {
     header.appendChild(moveButtons);
     header.appendChild(number);
 
-    // Native drag-and-drop reordering: only a press starting on the grip
-    // handle actually begins a drag, so the slider and number input below
-    // stay fully usable (their own mousedown/pointer handling is untouched
-    // since dragstart is cancelled whenever it didn't originate on the handle).
-    card.addEventListener('dragstart', (e) => {
-        if (!e.target.closest('.drag-handle')) { e.preventDefault(); return; }
-        card.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(idx));
-    });
-    card.addEventListener('dragend', () => card.classList.remove('dragging'));
-    card.addEventListener('dragover', (e) => {
+    // Pointer-based reordering, not the native HTML5 drag-and-drop API —
+    // that API's support for reordering plain elements (as opposed to
+    // dragging text/links/images) is inconsistent across browsers,
+    // Safari in particular. Pointer events work the same way everywhere
+    // and on touch, so the grip handle drags reliably.
+    handle.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
-        card.classList.add('drag-over');
-    });
-    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-    card.addEventListener('drop', (e) => {
-        e.preventDefault();
-        card.classList.remove('drag-over');
-        const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        if (!Number.isNaN(from)) moveLayer(from, idx);
+        startLayerDrag(idx, card);
     });
 
     const slider = document.createElement('input');

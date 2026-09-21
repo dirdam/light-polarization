@@ -449,6 +449,8 @@ input[type="range"]:focus {
     height: 16px;
     color: var(--text-dim);
     cursor: grab;
+    touch-action: none;
+    user-select: none;
 }
 
 .drag-handle:active {
