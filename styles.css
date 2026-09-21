@@ -266,7 +266,7 @@ header p.intro strong {
     /* Sharp corners, matching the actual (sharp) shape used for the
        darkening geometry in #photoDarkening — a rounded border here
        would visually promise a shape this pane doesn't actually have. */
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid var(--pane-color, var(--accent));
     /* Purely decorative glass sheen — the border and this fill both sit
        *underneath* #photoDarkening in paint order (see index.html), so
        the same per-region transmission that darkens the light source
