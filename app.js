@@ -719,11 +719,7 @@ function subsetTransmission(subset) {
 
 // Skip slivers too small to matter (fan-offset rounding, near-tangent
 // edges) rather than filling the DOM with imperceptible clipped divs.
-// Near-perpendicular-but-not-quite angles (e.g. two layers 5 degrees
-// apart) genuinely produce several tiny, correct slivers right where
-// panes' corners nearly-but-not-quite align — real regions, just too
-// small to read as anything but visual noise, so they're worth hiding.
-const MIN_RENDERED_REGION_AREA = 8;
+const MIN_RENDERED_REGION_AREA = 1;
 
 function renderDarkening(activeIdx) {
     photoDarkeningEl.innerHTML = '';
