@@ -379,23 +379,6 @@ function buildLayerCard(idx) {
     badge.appendChild(dot);
     badge.appendChild(label);
 
-    const moveButtons = document.createElement('div');
-    moveButtons.className = 'layer-move-buttons';
-    const upBtn = document.createElement('button');
-    upBtn.type = 'button';
-    upBtn.textContent = '▲';
-    upBtn.setAttribute('aria-label', 'Move layer up');
-    upBtn.disabled = idx === 0;
-    upBtn.addEventListener('click', () => moveLayer(idx, idx - 1));
-    const downBtn = document.createElement('button');
-    downBtn.type = 'button';
-    downBtn.textContent = '▼';
-    downBtn.setAttribute('aria-label', 'Move layer down');
-    downBtn.disabled = idx === layerCount - 1;
-    downBtn.addEventListener('click', () => moveLayer(idx, idx + 1));
-    moveButtons.appendChild(upBtn);
-    moveButtons.appendChild(downBtn);
-
     const number = document.createElement('input');
     number.type = 'number';
     number.className = 'field-number';
@@ -406,7 +389,6 @@ function buildLayerCard(idx) {
 
     header.appendChild(handle);
     header.appendChild(badge);
-    header.appendChild(moveButtons);
     header.appendChild(number);
 
     // Pointer-based reordering, not the native HTML5 drag-and-drop API —

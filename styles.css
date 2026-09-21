@@ -267,8 +267,10 @@ header p.intro strong {
 
 .polarizer-pane .axis-badge {
     position: absolute;
-    /* Anchored on the corner-to-center diagonal, close to the corner. */
-    top: 10%;
+    /* On the pane's own horizontal midline, near the left edge — lines
+       up with the axis-line's height so the label reads as belonging
+       to that angle line. */
+    top: 50%;
     left: 10%;
     font-size: 0.68em;
     font-weight: 700;
@@ -487,39 +489,6 @@ input[type="range"]:focus {
     color: var(--text-main);
     flex: 1;
     min-width: 0;
-}
-
-.layer-move-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-shrink: 0;
-}
-
-.layer-move-buttons button {
-    width: 20px;
-    height: 15px;
-    border: none;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.06);
-    color: var(--text-dim);
-    font-size: 0.6em;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-}
-
-.layer-move-buttons button:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.12);
-    color: var(--text-main);
-}
-
-.layer-move-buttons button:disabled {
-    opacity: 0.3;
-    cursor: default;
 }
 
 .layer-badge .dot {
