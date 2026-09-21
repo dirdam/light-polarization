@@ -479,7 +479,6 @@ function renderLayerControls() {
 onLangChange(renderLayerControls);
 
 // --- Photo effect + transmission ladder ---------------------------------
-const stageEl = document.getElementById('stage');
 const photoLayersEl = document.getElementById('photoLayers');
 const photoDarkeningEl = document.getElementById('photoDarkening');
 const stageLadderEl = document.getElementById('stageLadder');
@@ -496,11 +495,7 @@ function fmtPct(v) {
 // are expressed in that same stage-relative percentage, one step per
 // layer index.
 const PANE_HALF_DIAGONAL_PCT = 50;
-const PANE_SIDE_PCT = PANE_HALF_DIAGONAL_PCT * Math.SQRT2; // ~70.7107
 const FAN_STEP_PCT = 1.2;
-// Must match .polarizer-pane's border-radius in styles.css — used only
-// to chamfer the darkening geometry's corners to match that rounding.
-const PANE_BORDER_RADIUS_PX = 10;
 
 // The 4 corners of a pane, in stage-relative percentages, given its own
 // rotation and its (stage-relative) center offset. Angles are measured
@@ -520,27 +515,6 @@ function paneCorners(angleDeg, dxPct, dyPct) {
         });
     }
     return corners;
-}
-
-// Same square, but with each sharp corner replaced by two points cut
-// inward along its adjacent edges (a chamfer) — an 8-point approximation
-// of a rounded corner. A straight chamfer of length L is always a
-// subset of the true rounded corner of radius L (the arc always bulges
-// outward past its own chord), so using L = the pane's actual
-// border-radius guarantees this shape never pokes past the visible
-// rounded pane border, without needing real arcs in the clip-path.
-function chamferedPaneCorners(angleDeg, dxPct, dyPct, chamferPct) {
-    const sharp = paneCorners(angleDeg, dxPct, dyPct);
-    const t = chamferPct / PANE_SIDE_PCT;
-    const out = [];
-    for (let k = 0; k < 4; k++) {
-        const prev = sharp[(k - 1 + 4) % 4];
-        const cur = sharp[k];
-        const next = sharp[(k + 1) % 4];
-        out.push({ x: cur.x + t * (prev.x - cur.x), y: cur.y + t * (prev.y - cur.y) });
-        out.push({ x: cur.x + t * (next.x - cur.x), y: cur.y + t * (next.y - cur.y) });
-    }
-    return out;
 }
 
 function polygonClipPath(corners) {
@@ -704,11 +678,11 @@ function convexDifference(polyA, polyB) {
 // overlap), leaves the rest of that cell untouched (where they don't),
 // or starts a brand-new cell of its own (wherever it lands on ground no
 // earlier pane reached at all).
-function buildRegions(activeIdx, chamferPct) {
+function buildRegions(activeIdx) {
     let cells = [];
     activeIdx.forEach((originalIdx) => {
         const angle = angles[originalIdx];
-        const paneQuad = chamferedPaneCorners(angle, originalIdx * FAN_STEP_PCT, -originalIdx * FAN_STEP_PCT, chamferPct);
+        const paneQuad = paneCorners(angle, originalIdx * FAN_STEP_PCT, -originalIdx * FAN_STEP_PCT);
         const nextCells = [];
         let remaining = [paneQuad];
         cells.forEach((cell) => {
@@ -749,16 +723,7 @@ const MIN_RENDERED_REGION_AREA = 1;
 
 function renderDarkening(activeIdx) {
     photoDarkeningEl.innerHTML = '';
-    // Convert the pane's fixed-pixel border-radius into this render's
-    // stage-relative percentage, so the chamfer tracks the actual
-    // rounded corner regardless of viewport size.
-    const stageWidthPx = stageEl.clientWidth || 1;
-    // A chamfer of exactly 0 (both cut points collapsing onto the sharp
-    // corner) is degenerate even with vertex merging — never actually
-    // reachable here since PANE_BORDER_RADIUS_PX is a positive constant,
-    // but clamped anyway as cheap insurance.
-    const chamferPct = Math.max((PANE_BORDER_RADIUS_PX / stageWidthPx) * 100, 0.05);
-    buildRegions(activeIdx, chamferPct).forEach((cell) => {
+    buildRegions(activeIdx).forEach((cell) => {
         if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
         const level = document.createElement('div');
         level.className = 'darkening-level';
