@@ -638,51 +638,57 @@ function convexDifference(polyA, polyB) {
 // each new pane either extends an existing cell's subset (where they
 // overlap), leaves the rest of that cell untouched (where they don't),
 // or starts a brand-new cell of its own (wherever it lands on ground no
-// earlier pane reached at all). Returns a SNAPSHOT of the region list
-// after each layer is folded in — snapshots[i] is exactly the correct
-// darkening "as seen right after filter activeIdx[i]", which
-// renderPhotoStack interleaves with that same layer's own pane, so a
-// layer's border/axis is affected by itself and everything before it,
-// but not yet by anything stacked after it.
+// earlier pane reached at all).
+//
+// Returns, per layer, only the pieces that are NEW or EXTENDED at that
+// step — not the full cumulative region list. This matters: painting
+// each layer's darkening as its own sequential overlay means the
+// browser's own alpha compositing multiplies each region's overlays
+// together, exactly reconstructing that region's cumulative Malus's-
+// law product — but only if each region gets painted with its own
+// INCREMENTAL factor exactly once, at the depth where it was created
+// or last extended. Re-painting an unchanged (carried-over) region's
+// full cumulative alpha again at a later depth would multiply that
+// same cumulative value into itself, compounding into something far
+// darker than correct (verified: this is exactly what made the whole
+// stage go nearly solid black instead of showing the true 12.5%).
 function buildRegionSnapshots(activeIdx) {
     let cells = [];
-    const snapshots = [];
+    const newPiecesPerDepth = [];
     activeIdx.forEach((originalIdx) => {
         const angle = angles[originalIdx];
         const paneQuad = paneCorners(angle, originalIdx * FAN_STEP_PCT, -originalIdx * FAN_STEP_PCT);
         const nextCells = [];
+        const newPieces = [];
         let remaining = [paneQuad];
         cells.forEach((cell) => {
             const overlap = convexIntersect(cell.polygon, paneQuad);
             if (polygonArea(overlap) > 1e-6) {
-                nextCells.push({ polygon: overlap, subset: [...cell.subset, originalIdx] });
+                const prevIdx = cell.subset[cell.subset.length - 1];
+                const delta = angle - angles[prevIdx];
+                const c = Math.cos((delta * Math.PI) / 180);
+                const extended = { polygon: overlap, subset: [...cell.subset, originalIdx], local: c * c };
+                nextCells.push(extended);
+                newPieces.push(extended);
                 remaining = remaining.flatMap((r) => convexDifference(r, cell.polygon));
             }
-            convexDifference(cell.polygon, paneQuad).forEach((p) => nextCells.push({ polygon: p, subset: cell.subset }));
+            // Unchanged part of this existing cell — not touched by this
+            // layer at all, so it keeps whatever was already painted for
+            // it and must NOT be added to newPieces (else it would be
+            // re-darkened all over again with no new information).
+            convexDifference(cell.polygon, paneQuad).forEach((p) => nextCells.push({ polygon: p, subset: cell.subset, local: cell.local }));
         });
-        remaining.forEach((p) => { if (polygonArea(p) > 1e-6) nextCells.push({ polygon: p, subset: [originalIdx] }); });
+        remaining.forEach((p) => {
+            if (polygonArea(p) > 1e-6) {
+                const fresh = { polygon: p, subset: [originalIdx], local: 0.5 };
+                nextCells.push(fresh);
+                newPieces.push(fresh);
+            }
+        });
         cells = nextCells;
-        snapshots.push(cells);
+        newPiecesPerDepth.push(newPieces);
     });
-    return snapshots;
-}
-
-// Sequential Malus's law over an arbitrary (already stack-ordered)
-// subset of layers — the same rule as computeStages, just applied to
-// whichever filters actually cover a given region instead of always
-// the full active list.
-function subsetTransmission(subset) {
-    let I = 1;
-    subset.forEach((idx, j) => {
-        if (j === 0) {
-            I *= 0.5;
-        } else {
-            const delta = angles[idx] - angles[subset[j - 1]];
-            const c = Math.cos((delta * Math.PI) / 180);
-            I *= c * c;
-        }
-    });
-    return I;
+    return newPiecesPerDepth;
 }
 
 // Skip slivers too small to matter (fan-offset rounding, near-tangent
@@ -703,14 +709,18 @@ const MIN_RENDERED_REGION_AREA = 1;
 function renderPhotoStack(activeIdx) {
     photoStackEl.innerHTML = '';
     photoBadgesEl.innerHTML = '';
-    const snapshots = buildRegionSnapshots(activeIdx);
+    const newPiecesPerDepth = buildRegionSnapshots(activeIdx);
     activeIdx.forEach((originalIdx, i) => {
-        snapshots[i].forEach((cell) => {
+        // Each piece's OWN incremental local factor, not its cumulative
+        // transmission — the sequential overlays across all depths are
+        // what reconstructs the correct cumulative darkening (see
+        // buildRegionSnapshots).
+        newPiecesPerDepth[i].forEach((cell) => {
             if (polygonArea(cell.polygon) < MIN_RENDERED_REGION_AREA) return;
             const level = document.createElement('div');
             level.className = 'darkening-level';
             level.style.clipPath = polygonClipPath(cell.polygon);
-            level.style.background = `rgba(0, 0, 0, ${1 - subsetTransmission(cell.subset)})`;
+            level.style.background = `rgba(0, 0, 0, ${1 - cell.local})`;
             photoStackEl.appendChild(level);
         });
 
