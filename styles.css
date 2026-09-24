@@ -405,31 +405,24 @@ header p.intro strong {
     color: var(--accent-mid);
 }
 
-.field-hint {
-    font-size: 0.75em;
-    color: var(--text-dim);
-    margin-top: 6px;
-}
-
 .layer-count-stepper {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
+    gap: 8px;
 }
 
 .stepper-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     border: none;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
     color: #fff;
-    font-size: 1.2em;
+    font-size: 0.75em;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -450,9 +443,9 @@ header p.intro strong {
 }
 
 .stepper-value {
-    min-width: 1.5em;
+    min-width: 1em;
     text-align: center;
-    font-size: 1.3em;
+    font-size: 0.85em;
     font-weight: 800;
     color: var(--accent);
     font-variant-numeric: tabular-nums;
