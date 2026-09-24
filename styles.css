@@ -527,10 +527,16 @@ input[type="range"]:focus {
     top: 50%;
     left: calc(8px + var(--tick-fraction, 0) * (100% - 16px));
     width: 1px;
-    height: 10px;
+    height: 6px;
     background: var(--text-dim);
     opacity: 0.6;
     transform: translate(-50%, -50%);
+}
+
+/* Every 15 degrees (a divisor of 15) reads as a stronger reference
+   mark; the in-between 5-degree marks (still snap points) stay minor. */
+.angle-tick-major {
+    height: 10px;
 }
 
 /* --- Per-layer angle cards ------------------------------------------- */

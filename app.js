@@ -430,9 +430,9 @@ function buildLayerCard(idx) {
     const ticks = document.createElement('div');
     ticks.className = 'angle-ticks';
     ticks.setAttribute('aria-hidden', 'true');
-    for (let deg = 0; deg <= 180; deg += 15) {
+    for (let deg = 0; deg <= 180; deg += 5) {
         const tick = document.createElement('span');
-        tick.className = 'angle-tick';
+        tick.className = 'angle-tick' + (deg % 15 === 0 ? ' angle-tick-major' : '');
         tick.style.setProperty('--tick-fraction', String(deg / 180));
         ticks.appendChild(tick);
     }
