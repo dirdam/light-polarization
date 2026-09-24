@@ -436,8 +436,8 @@ function buildLayerCard(idx) {
         tick.style.setProperty('--tick-fraction', String(deg / 180));
         ticks.appendChild(tick);
     }
-    sliderWrap.appendChild(slider);
     sliderWrap.appendChild(ticks);
+    sliderWrap.appendChild(slider);
 
     card.appendChild(header);
     card.appendChild(sliderWrap);

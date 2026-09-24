@@ -483,15 +483,43 @@ input[type="range"]:focus {
    edges of the track, so each tick's left position — half the thumb
    width, plus that same fraction of the *remaining* travel distance —
    lines up with exactly where the thumb sits at that value, instead of
-   drifting outward past it toward the ends. */
+   drifting outward past it toward the ends.
+   A fixed height matching the thumb diameter (16px), with the input
+   flex-centered inside it, guarantees the ticks' own vertical center
+   (from inset:0 on that same box) exactly coincides with the track's
+   center — rather than relying on the input's own default box height,
+   which isn't guaranteed to match. */
 .angle-slider-wrap {
     position: relative;
+    /* Establishes its own stacking context (position + a real z-index,
+       not "auto") so the ticks' negative z-index below is scoped to
+       stacking *within this wrapper* — without this, a negative
+       z-index climbs to the nearest ancestor that DOES establish one,
+       which could be several parents up, hiding the ticks behind
+       every ancestor's own background in between, not just the
+       slider's track. */
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    height: 16px;
+}
+
+.angle-slider-wrap input[type="range"] {
+    flex: 1;
+    /* Translucent instead of solid, so the tick marks underneath (see
+       z-index below) show through the track rather than being hidden
+       by it — ticks behind, track over them, thumb on top of both. */
+    background: rgba(217, 217, 217, 0.55);
 }
 
 .angle-ticks {
     position: absolute;
     inset: 0;
     pointer-events: none;
+    /* Absolutely-positioned elements paint above static ones by
+       default regardless of DOM order, so this needs an explicit
+       negative z-index to actually sit behind the (static) input. */
+    z-index: -1;
 }
 
 .angle-tick {
