@@ -403,8 +403,9 @@ function buildLayerCard(idx) {
     slider.type = 'range';
     slider.min = '0';
     slider.max = '180';
-    slider.step = '1';
+    slider.step = '5';
     slider.value = String(angles[idx]);
+    slider.setAttribute('list', ANGLE_TICKS_ID);
     slider.setAttribute('aria-label', layerLabelText(idx));
 
     const deltaEl = document.createElement('div');
@@ -815,6 +816,23 @@ function recomputeAndRender() {
 }
 
 // --- Boot ------------------------------------------------------------
+// A shared <datalist> of every 5-degree mark, referenced by every angle
+// slider's `list` attribute — the browser renders it as tick marks
+// along the track (Chrome/Firefox/Edge; Safari doesn't draw them, but
+// the snapping below still works there regardless).
+const ANGLE_TICKS_ID = 'angleTicks';
+function initAngleTicks() {
+    const datalist = document.createElement('datalist');
+    datalist.id = ANGLE_TICKS_ID;
+    for (let deg = 0; deg <= 180; deg += 5) {
+        const option = document.createElement('option');
+        option.value = String(deg);
+        datalist.appendChild(option);
+    }
+    document.body.appendChild(datalist);
+}
+initAngleTicks();
+
 // Open on the classic "three-filter reveal" so the effect is visible
 // immediately, without waiting for the user to find the preset button.
 angles[0] = 0;
