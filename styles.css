@@ -358,14 +358,10 @@ header p.intro strong {
     font-size: 0.85em;
 }
 
-.stage-chip.final {
-    background: var(--accent);
-    color: #fff;
-}
-
-.stage-chip.final .stage-chip-value,
-.stage-chip.final .stage-chip-delta {
-    color: #fff;
+/* Color set inline per layer (see renderLadder) — same identity color
+   as that layer's border/axis-line/badge elsewhere. */
+.stage-chip-label {
+    font-weight: 800;
 }
 
 .stage-arrow {

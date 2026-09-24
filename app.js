@@ -779,10 +779,20 @@ function renderLadder(activeIdx, stages) {
             stageLadderEl.appendChild(arrow);
         }
         const chip = document.createElement('span');
-        chip.className = 'stage-chip' + (i === stages.length - 1 ? ' final' : '');
+        chip.className = 'stage-chip';
         const value = document.createElement('span');
         value.className = 'stage-chip-value';
-        value.textContent = i === 0 ? `I₀ ${fmtPct(stage.value)}` : `L${activeIdx[i - 1] + 1} ${fmtPct(stage.value)}`;
+        if (i === 0) {
+            value.textContent = fmtPct(stage.value);
+        } else {
+            const originalIdx = activeIdx[i - 1];
+            const label = document.createElement('span');
+            label.className = 'stage-chip-label';
+            label.style.color = layerColorFor(originalIdx);
+            label.textContent = `L${originalIdx + 1}`;
+            value.appendChild(label);
+            value.appendChild(document.createTextNode(` ${fmtPct(stage.value)}`));
+        }
         chip.appendChild(value);
         if (stage.delta !== null) {
             const delta = document.createElement('span');
