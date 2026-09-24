@@ -411,6 +411,53 @@ header p.intro strong {
     margin-top: 6px;
 }
 
+.layer-count-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.stepper-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+    color: #fff;
+    font-size: 1.2em;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.stepper-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.stepper-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.stepper-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.stepper-value {
+    min-width: 1.5em;
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+
 .field-number {
     width: 84px;
     padding: 6px 8px;

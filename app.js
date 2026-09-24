@@ -13,6 +13,8 @@ const STRINGS = {
         transmissionLabel: 'Transmitted light',
         layersGroupLabel: 'Layers',
         layersHint: 'How many polarizing filters are stacked, in order',
+        layerCountDecrease: 'Decrease layer count',
+        layerCountIncrease: 'Increase layer count',
         layerLabel: 'Layer',
         layerAbbrev: 'L',
         layerDeltaLabel: 'vs previous',
@@ -35,6 +37,8 @@ const STRINGS = {
         transmissionLabel: 'Luz transmitida',
         layersGroupLabel: 'Capas',
         layersHint: 'Cuántos filtros polarizadores hay apilados, en orden',
+        layerCountDecrease: 'Reducir el número de capas',
+        layerCountIncrease: 'Aumentar el número de capas',
         layerLabel: 'Capa',
         layerAbbrev: 'C',
         layerDeltaLabel: 'vs. anterior',
@@ -57,6 +61,8 @@ const STRINGS = {
         transmissionLabel: '透過する光',
         layersGroupLabel: '層の数',
         layersHint: '何枚の偏光フィルターを、どの順番で重ねるか',
+        layerCountDecrease: '層の数を減らす',
+        layerCountIncrease: '層の数を増やす',
         layerLabel: '層',
         layerAbbrev: '層',
         layerDeltaLabel: '直前との差',
@@ -306,23 +312,14 @@ function endLayerDrag() {
 }
 
 // --- Layer-count field: slider + synced number input --------------------
-const layerCountSlider = document.getElementById('layerCountSlider');
-const layerCountNumber = document.getElementById('layerCountNumber');
-
-// Reuse the same tick-mark overlay as the per-layer angle sliders,
-// wrapping this already-in-the-page element in place: capture where it
-// sits before buildTickedSlider moves it into a new wrapper, then
-// re-insert that wrapper at the exact same spot.
-(function addLayerCountTicks() {
-    const parent = layerCountSlider.parentNode;
-    const nextSibling = layerCountSlider.nextSibling;
-    const wrap = buildTickedSlider(layerCountSlider, 1, MAX_LAYERS, 1, 1);
-    parent.insertBefore(wrap, nextSibling);
-})();
+const layerCountMinusBtn = document.getElementById('layerCountMinus');
+const layerCountPlusBtn = document.getElementById('layerCountPlus');
+const layerCountDisplayEl = document.getElementById('layerCountDisplay');
 
 function syncLayerCountUI() {
-    layerCountSlider.value = String(layerCount);
-    if (document.activeElement !== layerCountNumber) layerCountNumber.value = String(layerCount);
+    layerCountDisplayEl.textContent = String(layerCount);
+    layerCountMinusBtn.disabled = layerCount <= 1;
+    layerCountPlusBtn.disabled = layerCount >= MAX_LAYERS;
 }
 
 function setLayerCount(v) {
@@ -335,11 +332,8 @@ function setLayerCount(v) {
     recomputeAndRender();
 }
 
-layerCountSlider.addEventListener('input', () => setLayerCount(layerCountSlider.value));
-layerCountNumber.addEventListener('input', () => {
-    const v = parseInt(layerCountNumber.value, 10);
-    if (!Number.isNaN(v)) setLayerCount(v);
-});
+layerCountMinusBtn.addEventListener('click', () => setLayerCount(layerCount - 1));
+layerCountPlusBtn.addEventListener('click', () => setLayerCount(layerCount + 1));
 
 // --- Per-layer angle cards ------------------------------------------------
 const layerControlsContainer = document.getElementById('layerControls');
