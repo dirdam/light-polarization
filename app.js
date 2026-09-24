@@ -414,8 +414,28 @@ function buildLayerCard(idx) {
     const deltaEl = document.createElement('div');
     deltaEl.className = 'layer-delta';
 
+    // The native <datalist> tick marks (via the slider's `list`
+    // attribute above) aren't drawn by every browser — Safari accepts
+    // the attribute for snapping but never renders the ticks — so this
+    // is a custom, always-visible overlay instead, positioned as plain
+    // percentages of the track width (0-180 -> 0-100%), coarser than
+    // the 5-degree snap points to stay readable as a ruler.
+    const sliderWrap = document.createElement('div');
+    sliderWrap.className = 'angle-slider-wrap';
+    const ticks = document.createElement('div');
+    ticks.className = 'angle-ticks';
+    ticks.setAttribute('aria-hidden', 'true');
+    for (let deg = 0; deg <= 180; deg += 15) {
+        const tick = document.createElement('span');
+        tick.className = 'angle-tick';
+        tick.style.left = `${(deg / 180) * 100}%`;
+        ticks.appendChild(tick);
+    }
+    sliderWrap.appendChild(slider);
+    sliderWrap.appendChild(ticks);
+
     card.appendChild(header);
-    card.appendChild(slider);
+    card.appendChild(sliderWrap);
     card.appendChild(deltaEl);
 
     function apply(value) {

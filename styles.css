@@ -473,6 +473,34 @@ input[type="range"]:focus {
     outline-offset: 2px;
 }
 
+/* Custom always-visible angle reference marks — the native <datalist>
+   ticks (via the slider's own `list` attribute) aren't rendered by
+   every browser (Safari accepts it for snapping but never draws the
+   ticks), so this is a plain percentage-based overlay instead. */
+.angle-slider-wrap {
+    position: relative;
+    padding-bottom: 8px;
+}
+
+.angle-ticks {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 8px;
+    pointer-events: none;
+}
+
+.angle-tick {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 6px;
+    background: var(--text-dim);
+    opacity: 0.6;
+    transform: translateX(-50%);
+}
+
 /* --- Per-layer angle cards ------------------------------------------- */
 .layer-controls {
     display: flex;
