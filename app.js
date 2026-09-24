@@ -14,6 +14,7 @@ const STRINGS = {
         layersGroupLabel: 'Layers',
         layersHint: 'How many polarizing filters are stacked, in order',
         layerLabel: 'Layer',
+        layerAbbrev: 'L',
         layerDeltaLabel: 'vs previous',
         presetsLabel: 'Presets',
         presetAligned: 'Aligned',
@@ -35,6 +36,7 @@ const STRINGS = {
         layersGroupLabel: 'Capas',
         layersHint: 'Cuántos filtros polarizadores hay apilados, en orden',
         layerLabel: 'Capa',
+        layerAbbrev: 'C',
         layerDeltaLabel: 'vs. anterior',
         presetsLabel: 'Preajustes',
         presetAligned: 'Alineados',
@@ -56,6 +58,7 @@ const STRINGS = {
         layersGroupLabel: '層の数',
         layersHint: '何枚の偏光フィルターを、どの順番で重ねるか',
         layerLabel: '層',
+        layerAbbrev: '層',
         layerDeltaLabel: '直前との差',
         presetsLabel: 'プリセット',
         presetAligned: '揃える',
@@ -475,6 +478,10 @@ function renderLayerControls() {
     }
 }
 onLangChange(renderLayerControls);
+// The transmission ladder's "L1"/"C1"/"層1" labels are language-
+// dependent too, so it needs a refresh on switch, same as the layer
+// cards above.
+onLangChange(recomputeAndRender);
 
 // --- Photo effect + transmission ladder ---------------------------------
 const photoStackEl = document.getElementById('photoStack');
@@ -787,7 +794,7 @@ function renderLadder(activeIdx, stages) {
             const label = document.createElement('span');
             label.className = 'stage-chip-label';
             label.style.color = layerColorFor(originalIdx);
-            label.textContent = `L${originalIdx + 1}`;
+            label.textContent = `${t('layerAbbrev')}${originalIdx + 1}`;
             value.appendChild(label);
             value.appendChild(document.createTextNode(` ${fmtPct(stage.value)}`));
         }
