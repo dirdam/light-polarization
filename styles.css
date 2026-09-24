@@ -201,20 +201,7 @@ header p.intro strong {
     inset: 0;
     width: 100%;
     height: 100%;
-    /* A vivid multi-color sunburst rather than the site's own muted
-       two-tone accent — thematically fitting too, since real photos of
-       stressed plastic under crossed polarizers famously show these
-       kinds of rainbow interference colors. */
-    background:
-        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.95) 10%, rgba(255, 255, 255, 0) 55%),
-        repeating-conic-gradient(from 0deg,
-            #ff3d7f 0deg 5deg,
-            #ff9f1c 5deg 10deg,
-            #ffd60a 10deg 15deg,
-            #2ec4b6 15deg 20deg,
-            #3a86ff 20deg 25deg,
-            #8338ec 25deg 30deg);
-    background-color: var(--surface-1);
+    background: #ffffff;
 }
 
 /* Holds each layer's darkening regions and its pane (border + axis-line)
