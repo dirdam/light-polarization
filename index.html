@@ -70,20 +70,22 @@
         <div class="panel how-to-interpret">
             <h2 data-i18n="howToInterpretTitle">How to interpret</h2>
             <p data-i18n-html="howToInterpretHtml1">
-                Unpolarized light loses exactly half its intensity through the very first filter, whatever angle
-                you set it to &mdash; that angle doesn't matter yet, since there's no reference direction to measure
-                it against. From the second filter onward, each additional filter transmits a fraction
-                <strong>cos&sup2;(&Delta;&theta;)</strong> of the light that reached it, where &Delta;&theta; is the
-                angle between that filter and the one right before it (Malus's law). Rotate the individual layers
-                and watch that transmission ladder change stage by stage.
+                A polarizing filter isn't a shutter that simply blocks or passes light. It splits any incoming
+                light into two perpendicular components &mdash; one aligned with its own transmission axis, one at
+                90&deg; to it &mdash; and lets only the aligned component through, absorbing the rest. If the
+                light's polarization sits at angle &Delta;&theta; from that axis, the transmitted fraction is
+                <strong>cos&sup2;(&Delta;&theta;)</strong> (Malus's law). Light that has just passed a filter
+                emerges fully aligned with that filter's axis, so the next filter measures its own &Delta;&theta;
+                from there &mdash; not from some fixed zero.
             </p>
             <p data-i18n-html="howToInterpretHtml2">
-                This is why two crossed filters (&Delta;&theta;=90&deg;) block essentially everything, but slipping a
-                third filter at 45&deg; between them restores about 12.5% of the light &mdash; each of the two
-                45&deg; steps only costs a <strong>cos&sup2;(45&deg;)=50%</strong> loss, instead of one brutal
-                cos&sup2;(90&deg;)=0% jump. Try the <strong>Three-filter reveal</strong> preset, then compare it
-                with <strong>Gentle rotation</strong>, which spreads the same 0&deg;&rarr;90&deg; turn over five
-                small steps and lets even more light through.
+                That's why two crossed filters (&Delta;&theta;=90&deg;) block almost everything:
+                cos&sup2;(90&deg;)=0. But insert a third filter at 45&deg; between them, and the light gets
+                decomposed twice instead of once &mdash; each 45&deg; step only costs a
+                <strong>cos&sup2;(45&deg;)=50%</strong> loss, letting about 12.5% back through. Try the
+                <strong>Three-filter reveal</strong> preset, then compare it with <strong>Gentle rotation</strong>,
+                which spreads the same 0&deg;&rarr;90&deg; turn over five small steps and lets even more light
+                through.
             </p>
         </div>
 
