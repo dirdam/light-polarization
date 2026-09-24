@@ -691,13 +691,12 @@ input[type="range"]:focus {
 }
 
 .preset-buttons {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
 }
 
 .preset-buttons button {
-    flex: 1;
     min-width: 0;
     background: rgba(0, 0, 0, 0.06);
     border: none;
