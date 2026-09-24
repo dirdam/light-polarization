@@ -201,7 +201,24 @@ header p.intro strong {
     inset: 0;
     width: 100%;
     height: 100%;
-    background: #ffffff;
+    /* Equidistant concentric rings, each a distinct bright color (never
+       black), rather than a flat fill — dimming a flat color by, say,
+       12% just looks "very dark", easy to misread as fully blocked.
+       Dimming a ring pattern keeps the *relative* contrast between
+       neighboring bands intact, and the eye is far better at spotting
+       that a boundary between two dark bands still exists than at
+       judging one dark shade in isolation — so even a faint 12%
+       transmission still visibly reads as "the rings are still there",
+       not "it's just black". */
+    background:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 6%, rgba(255, 255, 255, 0) 10%),
+        repeating-radial-gradient(circle at 50% 50%,
+            #ff3d7f 0% 4%,
+            #ff9f1c 4% 8%,
+            #ffd60a 8% 12%,
+            #2ec4b6 12% 16%,
+            #3a86ff 16% 20%,
+            #8338ec 20% 24%);
 }
 
 /* Holds each layer's darkening regions and its pane (border + axis-line)
