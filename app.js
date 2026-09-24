@@ -417,9 +417,14 @@ function buildLayerCard(idx) {
     // The native <datalist> tick marks (via the slider's `list`
     // attribute above) aren't drawn by every browser — Safari accepts
     // the attribute for snapping but never renders the ticks — so this
-    // is a custom, always-visible overlay instead, positioned as plain
-    // percentages of the track width (0-180 -> 0-100%), coarser than
-    // the 5-degree snap points to stay readable as a ruler.
+    // is a custom, always-visible overlay instead, sitting right on the
+    // track. A plain percentage of the width would be wrong at the
+    // extremes: the thumb's own center can only travel from half its
+    // own width in from one edge to half its width in from the other
+    // (it can't hang off the end of the track), so each tick's position
+    // is expressed as that same "half-thumb-width plus a fraction of
+    // the remaining travel" via --tick-fraction (used inside calc() in
+    // CSS), matching exactly where the thumb itself would sit.
     const sliderWrap = document.createElement('div');
     sliderWrap.className = 'angle-slider-wrap';
     const ticks = document.createElement('div');
@@ -428,7 +433,7 @@ function buildLayerCard(idx) {
     for (let deg = 0; deg <= 180; deg += 15) {
         const tick = document.createElement('span');
         tick.className = 'angle-tick';
-        tick.style.left = `${(deg / 180) * 100}%`;
+        tick.style.setProperty('--tick-fraction', String(deg / 180));
         ticks.appendChild(tick);
     }
     sliderWrap.appendChild(slider);

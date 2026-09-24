@@ -473,32 +473,36 @@ input[type="range"]:focus {
     outline-offset: 2px;
 }
 
-/* Custom always-visible angle reference marks — the native <datalist>
-   ticks (via the slider's own `list` attribute) aren't rendered by
-   every browser (Safari accepts it for snapping but never draws the
-   ticks), so this is a plain percentage-based overlay instead. */
+/* Custom always-visible angle reference marks, sitting right on the
+   track — the native <datalist> ticks (via the slider's own `list`
+   attribute) aren't rendered by every browser (Safari accepts it for
+   snapping but never draws the ticks), so this is a custom overlay
+   instead. Must match the thumb's own width below (16px): the thumb's
+   center can only travel from half its own width in from one edge to
+   half its width in from the other, never reaching the true 0%/100%
+   edges of the track, so each tick's left position — half the thumb
+   width, plus that same fraction of the *remaining* travel distance —
+   lines up with exactly where the thumb sits at that value, instead of
+   drifting outward past it toward the ends. */
 .angle-slider-wrap {
     position: relative;
-    padding-bottom: 8px;
 }
 
 .angle-ticks {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-    height: 8px;
+    inset: 0;
     pointer-events: none;
 }
 
 .angle-tick {
     position: absolute;
-    top: 0;
+    top: 50%;
+    left: calc(8px + var(--tick-fraction, 0) * (100% - 16px));
     width: 1px;
-    height: 6px;
+    height: 10px;
     background: var(--text-dim);
     opacity: 0.6;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
 }
 
 /* --- Per-layer angle cards ------------------------------------------- */
