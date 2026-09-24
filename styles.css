@@ -477,19 +477,21 @@ input[type="range"]:focus {
    track — the native <datalist> ticks (via the slider's own `list`
    attribute) aren't rendered by every browser (Safari accepts it for
    snapping but never draws the ticks), so this is a custom overlay
-   instead. Must match the thumb's own width below (16px): the thumb's
-   center can only travel from half its own width in from one edge to
-   half its width in from the other, never reaching the true 0%/100%
-   edges of the track, so each tick's left position — half the thumb
-   width, plus that same fraction of the *remaining* travel distance —
-   lines up with exactly where the thumb sits at that value, instead of
-   drifting outward past it toward the ends.
+   instead. Shared by every ticked slider (per-layer angle sliders and
+   the layer-count slider, see buildTickedSlider in app.js). Must match
+   the thumb's own width below (16px): the thumb's center can only
+   travel from half its own width in from one edge to half its width in
+   from the other, never reaching the true 0%/100% edges of the track,
+   so each tick's left position — half the thumb width, plus that same
+   fraction of the *remaining* travel distance — lines up with exactly
+   where the thumb sits at that value, instead of drifting outward past
+   it toward the ends.
    A fixed height matching the thumb diameter (16px), with the input
    flex-centered inside it, guarantees the ticks' own vertical center
    (from inset:0 on that same box) exactly coincides with the track's
    center — rather than relying on the input's own default box height,
    which isn't guaranteed to match. */
-.angle-slider-wrap {
+.ticked-slider-wrap {
     position: relative;
     /* Establishes its own stacking context (position + a real z-index,
        not "auto") so the ticks' negative z-index below is scoped to
@@ -504,7 +506,7 @@ input[type="range"]:focus {
     height: 16px;
 }
 
-.angle-slider-wrap input[type="range"] {
+.ticked-slider-wrap input[type="range"] {
     flex: 1;
     /* Translucent instead of solid, so the tick marks underneath (see
        z-index below) show through the track rather than being hidden
@@ -512,7 +514,7 @@ input[type="range"]:focus {
     background: rgba(217, 217, 217, 0.55);
 }
 
-.angle-ticks {
+.slider-ticks {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -522,7 +524,7 @@ input[type="range"]:focus {
     z-index: -1;
 }
 
-.angle-tick {
+.slider-tick {
     position: absolute;
     top: 50%;
     left: calc(8px + var(--tick-fraction, 0) * (100% - 16px));
@@ -533,9 +535,11 @@ input[type="range"]:focus {
     transform: translate(-50%, -50%);
 }
 
-/* Every 15 degrees (a divisor of 15) reads as a stronger reference
-   mark; the in-between 5-degree marks (still snap points) stay minor. */
-.angle-tick-major {
+/* A "major" mark (every 15 degrees on the angle sliders; every step on
+   the layer-count slider, where all of them are major — see the
+   majorStep argument to buildTickedSlider) reads as a stronger
+   reference than an in-between minor one. */
+.slider-tick-major {
     height: 10px;
 }
 

@@ -309,6 +309,17 @@ function endLayerDrag() {
 const layerCountSlider = document.getElementById('layerCountSlider');
 const layerCountNumber = document.getElementById('layerCountNumber');
 
+// Reuse the same tick-mark overlay as the per-layer angle sliders,
+// wrapping this already-in-the-page element in place: capture where it
+// sits before buildTickedSlider moves it into a new wrapper, then
+// re-insert that wrapper at the exact same spot.
+(function addLayerCountTicks() {
+    const parent = layerCountSlider.parentNode;
+    const nextSibling = layerCountSlider.nextSibling;
+    const wrap = buildTickedSlider(layerCountSlider, 1, MAX_LAYERS, 1, 1);
+    parent.insertBefore(wrap, nextSibling);
+})();
+
 function syncLayerCountUI() {
     layerCountSlider.value = String(layerCount);
     if (document.activeElement !== layerCountNumber) layerCountNumber.value = String(layerCount);
@@ -336,6 +347,38 @@ let layerEls = []; // { slider, number, dial, deltaEl }
 
 function layerLabelText(idx) {
     return `${t('layerLabel')} ${idx + 1}`;
+}
+
+// Wraps an existing <input type="range"> with a custom tick-mark
+// overlay and returns the wrapper — reused for both the per-layer
+// angle sliders and the layer-count slider. The native <datalist>
+// ticks (via the slider's own `list` attribute, set separately) aren't
+// drawn by every browser (Safari accepts the attribute for snapping
+// but never renders the ticks), hence this custom version. Each tick's
+// position accounts for the thumb's own width (16px): the thumb's
+// center can only travel from half its own width in from one edge to
+// half its width in from the other, never reaching the track's true
+// 0%/100% ends, so a plain percentage would misplace the end ticks.
+function buildTickedSlider(sliderEl, min, max, step, majorStep) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ticked-slider-wrap';
+    const ticksEl = document.createElement('div');
+    ticksEl.className = 'slider-ticks';
+    ticksEl.setAttribute('aria-hidden', 'true');
+    for (let v = min; v <= max; v += step) {
+        const tick = document.createElement('span');
+        const isMajor = (v - min) % majorStep === 0;
+        tick.className = 'slider-tick' + (isMajor ? ' slider-tick-major' : '');
+        tick.style.setProperty('--tick-fraction', String((v - min) / (max - min)));
+        ticksEl.appendChild(tick);
+    }
+    // appendChild moves sliderEl here regardless of whether it already
+    // had a parent (freshly-created, not-yet-attached elements included)
+    // or none at all — the caller places the returned wrap wherever
+    // sliderEl itself used to belong, if it needs to preserve a spot.
+    wrap.appendChild(ticksEl);
+    wrap.appendChild(sliderEl);
+    return wrap;
 }
 
 function buildLayerCard(idx) {
@@ -414,30 +457,7 @@ function buildLayerCard(idx) {
     const deltaEl = document.createElement('div');
     deltaEl.className = 'layer-delta';
 
-    // The native <datalist> tick marks (via the slider's `list`
-    // attribute above) aren't drawn by every browser — Safari accepts
-    // the attribute for snapping but never renders the ticks — so this
-    // is a custom, always-visible overlay instead, sitting right on the
-    // track. A plain percentage of the width would be wrong at the
-    // extremes: the thumb's own center can only travel from half its
-    // own width in from one edge to half its width in from the other
-    // (it can't hang off the end of the track), so each tick's position
-    // is expressed as that same "half-thumb-width plus a fraction of
-    // the remaining travel" via --tick-fraction (used inside calc() in
-    // CSS), matching exactly where the thumb itself would sit.
-    const sliderWrap = document.createElement('div');
-    sliderWrap.className = 'angle-slider-wrap';
-    const ticks = document.createElement('div');
-    ticks.className = 'angle-ticks';
-    ticks.setAttribute('aria-hidden', 'true');
-    for (let deg = 0; deg <= 180; deg += 5) {
-        const tick = document.createElement('span');
-        tick.className = 'angle-tick' + (deg % 15 === 0 ? ' angle-tick-major' : '');
-        tick.style.setProperty('--tick-fraction', String(deg / 180));
-        ticks.appendChild(tick);
-    }
-    sliderWrap.appendChild(ticks);
-    sliderWrap.appendChild(slider);
+    const sliderWrap = buildTickedSlider(slider, 0, 180, 5, 15);
 
     card.appendChild(header);
     card.appendChild(sliderWrap);
