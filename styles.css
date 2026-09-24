@@ -206,7 +206,7 @@ header p.intro strong {
        stressed plastic under crossed polarizers famously show these
        kinds of rainbow interference colors. */
     background:
-        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 55%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.95) 10%, rgba(255, 255, 255, 0) 55%),
         repeating-conic-gradient(from 0deg,
             #ff3d7f 0deg 5deg,
             #ff9f1c 5deg 10deg,
