@@ -14,7 +14,6 @@ const STRINGS = {
         layersGroupLabel: 'Layers',
         layersHint: 'How many polarizing filters are stacked, in order',
         layerLabel: 'Layer',
-        layerFirstHint: "First filter — its angle alone doesn't change how much light gets through",
         layerDeltaLabel: 'vs previous',
         presetsLabel: 'Presets',
         presetAligned: 'Aligned',
@@ -36,7 +35,6 @@ const STRINGS = {
         layersGroupLabel: 'Capas',
         layersHint: 'Cuántos filtros polarizadores hay apilados, en orden',
         layerLabel: 'Capa',
-        layerFirstHint: 'Primer filtro — su ángulo por sí solo no cambia cuánta luz pasa',
         layerDeltaLabel: 'vs. anterior',
         presetsLabel: 'Preajustes',
         presetAligned: 'Alineados',
@@ -58,7 +56,6 @@ const STRINGS = {
         layersGroupLabel: '層の数',
         layersHint: '何枚の偏光フィルターを、どの順番で重ねるか',
         layerLabel: '層',
-        layerFirstHint: '最初のフィルター — その角度自体は透過する光の量を変えません',
         layerDeltaLabel: '直前との差',
         presetsLabel: 'プリセット',
         presetAligned: '揃える',
@@ -456,7 +453,7 @@ function updateDeltaText(idx) {
     const el = layerEls[idx]?.deltaEl;
     if (!el) return;
     if (idx === 0) {
-        el.textContent = t('layerFirstHint');
+        el.textContent = '';
     } else {
         const delta = angles[idx] - angles[idx - 1];
         el.textContent = `Δθ ${t('layerDeltaLabel')}: ${delta.toFixed(0)}°`;
